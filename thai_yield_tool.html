@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thai Govvie — Fair Value Tool</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+  :root {
+    --bg:#ffffff; --surf:#f8f9fa; --surf2:#eef2f7; --border:#e2e8f0; --border2:#c8d4e8;
+    --text:#1a1f2e; --muted:#6b7585; --accent:#185fa5; --green:#0f6e56; --red:#a32d2d;
+    --amber:#854f0b; --blue-bg:#dbeeff; --green-bg:#e1f5ee; --red-bg:#fcebeb;
+    --font-sans:'IBM Plex Sans',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:13px;}
+  header{padding:20px 28px 16px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:16px;background:var(--bg);}
+  header h1{font-family:var(--font-mono);font-size:14px;font-weight:500;color:var(--text);}
+  header span{font-size:11px;color:var(--muted);font-family:var(--font-mono);}
+  .layout{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 57px);}
+  .sidebar{border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:24px;background:var(--surf);}
+  .main{padding:20px 24px;display:flex;flex-direction:column;gap:20px;}
+  .section-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;}
+  .slider-group{display:flex;flex-direction:column;gap:12px;}
+  .slider-row{display:flex;flex-direction:column;gap:5px;}
+  .slider-header{display:flex;justify-content:space-between;align-items:baseline;}
+  .slider-name{font-size:11px;color:var(--muted);}
+  .slider-val{font-family:var(--font-mono);font-size:12px;font-weight:500;color:var(--text);}
+  input[type=range]{-webkit-appearance:none;width:100%;height:3px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg);transition:transform .15s;}
+  input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);}
+  .actual-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .actual-row{display:flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 8px;}
+  .actual-row label{font-family:var(--font-mono);font-size:10px;color:var(--muted);width:24px;flex-shrink:0;}
+  .actual-row input[type=number]{background:transparent;border:none;color:var(--accent);font-family:var(--font-mono);font-size:11px;font-weight:500;width:100%;outline:none;-moz-appearance:textfield;}
+  .actual-row input[type=number]::-webkit-outer-spin-button,.actual-row input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+  .scenario-grid{display:flex;flex-direction:column;gap:5px;}
+  .scenario-btn{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--muted);font-family:var(--font-sans);font-size:11px;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;transition:all .15s;}
+  .scenario-btn:hover{border-color:var(--border2);color:var(--text);background:var(--surf2);}
+  .scenario-vals{font-family:var(--font-mono);font-size:10px;color:var(--muted);}
+  table{width:100%;border-collapse:collapse;}
+  th{font-family:var(--font-mono);font-size:10px;letter-spacing:.05em;color:var(--muted);text-transform:uppercase;padding:0 8px 8px;text-align:right;font-weight:400;border-bottom:1px solid var(--border2);}
+  th:first-child{text-align:left;}
+  td{padding:6px 8px;text-align:right;font-family:var(--font-mono);font-size:12px;border-bottom:1px solid var(--border);color:var(--text);}
+  td:first-child{text-align:left;font-weight:500;}
+  tr:last-child td{border-bottom:none;}
+  .pill{display:inline-block;font-size:10px;font-family:var(--font-mono);padding:2px 8px;border-radius:4px;font-weight:500;}
+  .strong-buy{background:var(--blue-bg);color:var(--accent);}
+  .buy{background:var(--green-bg);color:var(--green);}
+  .fair{background:var(--surf2);color:var(--muted);}
+  .sell{background:#fff0ee;color:var(--red);}
+  .strong-sell{background:var(--red-bg);color:var(--red);}
+  .bar-track{width:70px;height:4px;background:var(--surf2);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle;}
+  .bar-fill-inner{height:100%;border-radius:2px;transition:width .3s;}
+  .chart-card{background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:16px 20px;}
+  .chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .chart-title{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;}
+  .legend{display:flex;gap:14px;font-size:11px;color:var(--muted);font-family:var(--font-mono);}
+  .legend-item{display:flex;align-items:center;gap:5px;}
+  .legend-line{width:16px;height:2px;border-radius:1px;}
+  .note{font-size:10px;color:var(--muted);font-family:var(--font-mono);padding:8px 12px;background:var(--surf);border:1px solid var(--border);border-radius:6px;line-height:1.7;}
+  .gap-pos{color:var(--accent);}
+  .gap-neg{color:var(--red);}
+  .warn{color:var(--amber);}
+</style>
+</head>
+<body>
+<header>
+  <h1>Thai Government Bond — Fair Value Tool</h1>
+  <span>OLS · Policy rate + Inflation + GDP · Feb 2010–Feb 2026 · 1Y–30Y</span>
+</header>
+<div class="layout">
+  <div class="sidebar">
+    <div>
+      <div class="section-label">Macro Inputs</div>
+      <div class="slider-group">
+        <div class="slider-row">
+          <div class="slider-header"><span class="slider-name">Policy rate</span><span class="slider-val" id="pr-val">1.00%</span></div>
+          <input type="range" min="0.25" max="5.0" step="0.25" value="1.00" id="sl-policy" oninput="update()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-header"><span class="slider-name">Inflation YoY</span><span class="slider-val" id="inf-val">-0.66%</span></div>
+          <input type="range" min="-3.0" max="8.0" step="0.25" value="-0.66" id="sl-inflation" oninput="update()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-header"><span class="slider-name">GDP growth YoY</span><span class="slider-val" id="gdp-val">2.50%</span></div>
+          <input type="range" min="-6.0" max="12.0" step="0.5" value="2.5" id="sl-gdp" oninput="update()">
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="section-label">Actual Yields — edit freely</div>
+      <div class="actual-grid" id="actual-inputs"></div>
+    </div>
+    <div>
+      <div class="section-label">Scenarios</div>
+      <div class="scenario-grid">
+        <button class="scenario-btn" onclick="setScenario(1.0,-0.66,2.5)"><span>Current (Feb 2026)</span><span class="scenario-vals">1.00 / -0.66 / 2.5</span></button>
+        <button class="scenario-btn" onclick="setScenario(1.0,1.5,3.5)"><span>Recovery</span><span class="scenario-vals">1.00 / 1.50 / 3.5</span></button>
+        <button class="scenario-btn" onclick="setScenario(1.25,3.0,4.0)"><span>Inflation returns</span><span class="scenario-vals">1.25 / 3.00 / 4.0</span></button>
+        <button class="scenario-btn" onclick="setScenario(0.75,-1.0,1.0)"><span>Recession</span><span class="scenario-vals">0.75 / -1.00 / 1.0</span></button>
+        <button class="scenario-btn" onclick="setScenario(2.0,4.0,3.0)"><span>War / Shock</span><span class="scenario-vals">2.00 / 4.00 / 3.0</span></button>
+        <button class="scenario-btn" onclick="setScenario(2.5,2.0,4.5)"><span>Rate hike cycle</span><span class="scenario-vals">2.50 / 2.00 / 4.5</span></button>
+      </div>
+    </div>
+  </div>
+  <div class="main">
+    <div>
+      <div class="section-label">Fair Value Analysis — 1Y to 30Y</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Tenor</th><th>Actual</th><th>Fair value</th><th>Gap (bps)</th><th>Signal</th><th style="text-align:left;padding-left:10px;">Valuation</th>
+          </tr>
+        </thead>
+        <tbody id="tenor-table"></tbody>
+      </table>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title">Yield curve — actual vs fair value</span>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-line" style="background:#185fa5;"></div><span>Actual</span></div>
+          <div class="legend-item"><div class="legend-line" style="background:#1d9e75;border-top:2px dashed #1d9e75;height:0;"></div><span>Fair value</span></div>
+        </div>
+      </div>
+      <div style="position:relative;height:200px;"><canvas id="yieldChart"></canvas></div>
+    </div>
+    <div class="note">
+      gap = actual − fair value &nbsp;|&nbsp;
+      <span class="gap-pos">positive gap = yield above fair value = cheap = buy signal</span> &nbsp;|&nbsp;
+      <span class="gap-neg">negative gap = yield below fair value = rich = expensive</span><br>
+      Signal thresholds based on historical residual distribution (P10/P25/P75/P90). &nbsp;
+      <span class="warn">* 12Y: n=180 (from 2011) · 20Y/30Y: n=150 (from 2014) — long-end signals less reliable.</span>
+    </div>
+  </div>
+</div>
+<script>
+const TENORS=['1Y','2Y','3Y','4Y','5Y','6Y','7Y','8Y','9Y','10Y','12Y','15Y','20Y','30Y'];
+const KEYS=['y1','y2','y3','y4','y5','y6','y7','y8','y9','y10','y12','y15','y20','y30'];
+const WARN_KEYS=['y12','y20','y30'];
+const COEFFS={y1:[0.010561,0.960168,0.055609,0.001657],y2:[0.137623,0.882467,0.119667,0.006706],y3:[0.309829,0.819154,0.134723,0.010401],y4:[0.374863,0.851537,0.108127,0.021531],y5:[0.650108,0.750225,0.153581,0.019266],y6:[0.600494,0.828302,0.113831,0.019137],y7:[1.087463,0.641617,0.151902,0.00879],y8:[1.129469,0.652587,0.149612,0.019178],y9:[1.279253,0.621402,0.147588,0.016303],y10:[1.308023,0.60468,0.153434,0.021194],y12:[1.545871,0.603527,0.118528,0.013449],y15:[1.71399,0.517026,0.167499,0.028654],y20:[1.873709,0.603499,0.159497,-0.000013],y30:[1.894806,0.727085,0.158714,-0.010586]};
+const STATS={y1:{p10:-0.1535,p25:-0.0883,p75:0.078,p90:0.166},y2:{p10:-0.2577,p25:-0.1532,p75:0.1641,p90:0.2865},y3:{p10:-0.3389,p25:-0.1954,p75:0.1757,p90:0.3477},y4:{p10:-0.4188,p25:-0.2347,p75:0.217,p90:0.4668},y5:{p10:-0.4802,p25:-0.277,p75:0.2386,p90:0.541},y6:{p10:-0.5234,p25:-0.327,p75:0.3196,p90:0.6654},y7:{p10:-0.5259,p25:-0.3149,p75:0.2362,p90:0.5987},y8:{p10:-0.5698,p25:-0.2865,p75:0.2456,p90:0.6367},y9:{p10:-0.5382,p25:-0.2905,p75:0.2691,p90:0.5944},y10:{p10:-0.6007,p25:-0.3366,p75:0.2692,p90:0.6883},y12:{p10:-0.528,p25:-0.2918,p75:0.2422,p90:0.6047},y15:{p10:-0.6516,p25:-0.3476,p75:0.3053,p90:0.6222},y20:{p10:-0.6178,p25:-0.2864,p75:0.35,p90:0.6352},y30:{p10:-0.8011,p25:-0.3715,p75:0.3934,p90:0.7763}};
+const DEFAULT_ACTUAL={y1:1.038,y2:1.041,y3:1.062,y4:1.137,y5:1.154,y6:1.275,y7:1.443,y8:1.565,y9:1.629,y10:1.711,y12:2.537,y15:2.102,y20:2.512,y30:2.685};
+
+function buildInputs(){
+  const g=document.getElementById('actual-inputs');
+  KEYS.forEach((k,i)=>{
+    const row=document.createElement('div'); row.className='actual-row';
+    row.innerHTML=`<label>${TENORS[i]}</label><input type="number" id="act-${k}" value="${DEFAULT_ACTUAL[k]}" step="0.001" min="0" max="20" oninput="update()">`;
+    g.appendChild(row);
+  });
+}
+function getActual(k){const v=parseFloat(document.getElementById('act-'+k).value);return isNaN(v)?0:v;}
+function fv(k,pr,inf,gdp){const c=COEFFS[k];return c[0]+c[1]*pr+c[2]*inf+c[3]*gdp;}
+function signal(gap,k){
+  const s=STATS[k];
+  if(gap>s.p90) return['strong buy','strong-buy'];
+  if(gap>s.p75) return['buy','buy'];
+  if(gap<s.p10) return['strong sell','strong-sell'];
+  if(gap<s.p25) return['sell','sell'];
+  return['fair','fair'];
+}
+function richPct(gap,k){
+  const s=STATS[k];
+  return Math.min(100,Math.max(0,(1-(gap-s.p10)/(s.p90-s.p10))*100));
+}
+let chart=null;
+function update(){
+  const pr=parseFloat(document.getElementById('sl-policy').value);
+  const inf=parseFloat(document.getElementById('sl-inflation').value);
+  const gdp=parseFloat(document.getElementById('sl-gdp').value);
+  document.getElementById('pr-val').textContent=pr.toFixed(2)+'%';
+  document.getElementById('inf-val').textContent=inf.toFixed(2)+'%';
+  document.getElementById('gdp-val').textContent=gdp.toFixed(2)+'%';
+  let html=''; const fvArr=[],actArr=[];
+  KEYS.forEach((k,i)=>{
+    const act=getActual(k); const fval=fv(k,pr,inf,gdp);
+    fvArr.push(fval); actArr.push(act);
+    const gap=act-fval; const gapBp=Math.round(gap*100);
+    const [st,sc]=signal(gap,k);
+    const rp=richPct(gap,k).toFixed(0);
+    const bc=gap>=0?'#185fa5':'#e24b4a';
+    const gc=gap>=0?'gap-pos':'gap-neg';
+    const gstr=(gapBp>=0?'+':'')+gapBp;
+    const warnIcon=WARN_KEYS.includes(k)?'<span style="color:#854f0b;font-size:9px;margin-left:2px;">*</span>':'';
+    html+=`<tr>
+      <td>${TENORS[i]}${warnIcon}</td>
+      <td>${act.toFixed(3)}%</td>
+      <td>${fval.toFixed(3)}%</td>
+      <td class="${gc}">${gstr}</td>
+      <td><span class="pill ${sc}">${st}</span></td>
+      <td style="text-align:left;padding-left:10px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="bar-track"><div class="bar-fill-inner" style="width:${rp}%;background:${bc};"></div></div>
+          <span style="font-size:10px;color:var(--muted);">${rp>60?'rich':rp<40?'cheap':'fair'}</span>
+        </div>
+      </td>
+    </tr>`;
+  });
+  document.getElementById('tenor-table').innerHTML=html;
+  if(!chart){
+    chart=new Chart(document.getElementById('yieldChart'),{
+      type:'line',
+      data:{labels:TENORS,datasets:[
+        {label:'Actual',data:actArr,borderColor:'#185fa5',borderWidth:2,pointRadius:3,pointBackgroundColor:'#185fa5',tension:0.3,fill:false},
+        {label:'Fair value',data:fvArr,borderColor:'#1d9e75',borderWidth:2,borderDash:[5,4],pointRadius:3,pointBackgroundColor:'#1d9e75',tension:0.3,fill:false}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7585',font:{family:'IBM Plex Mono',size:10}}},
+          y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#6b7585',font:{family:'IBM Plex Mono',size:10},callback:v=>v.toFixed(1)+'%'},min:0,max:5}
+        }}
+    });
+  } else {
+    chart.data.datasets[0].data=actArr;
+    chart.data.datasets[1].data=fvArr;
+    chart.update('none');
+  }
+}
+function setScenario(pr,inf,gdp){
+  document.getElementById('sl-policy').value=pr;
+  document.getElementById('sl-inflation').value=inf;
+  document.getElementById('sl-gdp').value=gdp;
+  update();
+}
+buildInputs(); update();
+</script>
+</body>
+</html>
