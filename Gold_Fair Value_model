@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Gold Fair Value Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#FAFAF8;--bg2:#F4F2EE;--bg3:#EDEAE4;
+  --border:#D8D3C8;--border2:#C8C2B4;
+  --ink:#1C1A16;--ink2:#3D3A32;--muted:#7A7468;--faint:#A8A298;
+  --gold:#9A6E1A;--gold-bg:#FDF6E8;--gold-mid:#C48A2A;--gold-lt:#F0E4C0;
+  --green:#1A6B3A;--green-bg:#EEF8F2;
+  --red:#8B2020;--red-bg:#FDF0F0;
+  --blue:#1A4A7A;--blue-bg:#EEF4FB;
+  --teal:#1A5A4A;--teal-bg:#EEF8F5;
+  --orange:#7A4A00;--orange-bg:#FFF8EE;--orange-border:#E0C070;
+}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;font-size:14px}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--ink);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:48px;border-bottom:2px solid var(--gold-mid);position:sticky;top:0;z-index:100}
+.topbar-brand{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:2px;color:#D4A840;font-weight:500}
+.topbar-pills{display:flex;gap:8px}
+.tpill{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 10px;border-radius:2px;letter-spacing:1px}
+.tp-r2{background:rgba(26,90,74,0.3);color:#7ADFC0;border:1px solid rgba(26,90,74,0.4)}
+.tp-date{background:rgba(201,168,76,0.15);color:#D4A840;border:1px solid rgba(201,168,76,0.25)}
+
+/* ── 2-COL LAYOUT ── */
+.page{display:grid;grid-template-columns:360px 1fr;min-height:calc(100vh - 48px)}
+
+/* ══ LEFT PANEL ══ */
+.left{background:white;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;position:sticky;top:48px;height:calc(100vh - 48px)}
+.left-hdr{padding:18px 22px 14px;border-bottom:1px solid var(--border)}
+.left-hdr h2{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:3px}
+.left-hdr p{font-size:11px;color:var(--muted);font-style:italic;font-family:'IBM Plex Mono',monospace}
+
+/* ACTUAL GOLD INPUT */
+.actual-input-section{padding:14px 22px;border-bottom:1px solid var(--border);background:var(--gold-bg)}
+.ai-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.ai-row{display:flex;align-items:center;gap:10px}
+.ai-prefix{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600;color:var(--gold-mid)}
+.ai-input{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:var(--ink);border:none;border-bottom:2px solid var(--gold-mid);background:transparent;width:140px;outline:none;padding:2px 4px}
+.ai-input:focus{border-bottom-color:var(--gold)}
+.ai-unit{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)}
+.ai-hint{font-size:10px;color:var(--gold);font-style:italic;margin-top:5px}
+
+/* MODEL TABS */
+.model-tabs{display:flex;border-bottom:1px solid var(--border)}
+.mtab{flex:1;padding:9px 0;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;border:none;background:var(--bg2);color:var(--muted);transition:all 0.15s;border-bottom:2px solid transparent}
+.mtab.active{background:white;color:var(--ink);font-weight:500;border-bottom-color:var(--gold-mid)}
+
+/* FACTOR SLIDERS */
+.factors-scroll{flex:1;overflow-y:auto;padding:14px 22px}
+.sec-lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--faint);margin-bottom:10px;margin-top:16px;display:flex;align-items:center;gap:8px}
+.sec-lbl:first-child{margin-top:0}
+.sec-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.fr{margin-bottom:14px}
+.fr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.fr-name{font-size:11px;font-weight:600}
+.fr-ticker{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--faint);margin-left:4px}
+.fr-rhs{display:flex;align-items:center;gap:6px}
+.fr-val{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600}
+.fr-unit{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+.fr-chg{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:1px 5px;border-radius:2px;min-width:36px;text-align:center}
+.chg-up{background:var(--green-bg);color:var(--green)}.chg-dn{background:var(--red-bg);color:var(--red)}.chg-flat{color:var(--faint)}
+.fr-hint{font-size:10px;color:var(--faint);font-style:italic;margin-bottom:4px}
+input[type=range]{width:100%;height:3px;-webkit-appearance:none;background:var(--border);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;cursor:pointer;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .1s}
+input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.25)}
+
+.reset-btn{width:100%;padding:8px;background:transparent;border:1px solid var(--border);border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;transition:all .15s;margin-top:8px;letter-spacing:.5px}
+.reset-btn:hover{border-color:var(--border2);color:var(--ink2)}
+
+/* ══ RIGHT PANEL ══ */
+.right{padding:22px 26px;display:flex;flex-direction:column;gap:16px;overflow:auto}
+
+/* RESULT HERO */
+.hero{background:white;border:1px solid var(--border);border-radius:5px;padding:22px 24px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.hero-bull::before{background:linear-gradient(90deg,var(--green),#7ADFC0)}
+.hero-bear::before{background:linear-gradient(90deg,var(--red),#FF9090)}
+.hero-fair::before{background:linear-gradient(90deg,var(--gold-mid),var(--gold-lt))}
+.hero-grid{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start;margin-bottom:14px}
+.hero-lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.hero-price{font-size:48px;font-weight:600;letter-spacing:-2px;line-height:1;margin-bottom:4px}
+.hero-sub{font-size:12px;color:var(--muted);font-style:italic}
+.hero-right{text-align:right}
+.hero-actual-lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin-bottom:3px}
+.hero-actual{font-size:22px;font-weight:600;color:var(--ink2);letter-spacing:-.5px;font-family:'IBM Plex Mono',monospace}
+.hero-gap{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;margin-top:4px}
+.gap-over{color:var(--red)}.gap-under{color:var(--green)}.gap-fair{color:var(--gold)}
+
+/* VERDICT */
+.verdict{border-radius:4px;padding:11px 14px;display:flex;align-items:flex-start;gap:10px}
+.v-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.v-text{font-size:12px;font-weight:600;line-height:1.4}
+.v-sub{font-size:11px;font-weight:400;margin-top:3px;opacity:.85;line-height:1.4}
+.v-over{background:var(--red-bg);border:1px solid #DDA0A0;color:var(--red)}
+.v-under{background:var(--green-bg);border:1px solid #90C0A0;color:var(--green)}
+.v-fair{background:var(--gold-bg);border:1px solid rgba(184,146,42,.4);color:var(--gold)}
+.v-warn{background:var(--orange-bg);border:1px solid var(--orange-border);color:var(--orange)}
+
+/* MOMENTUM HEALTH PANEL */
+.mom-panel{background:white;border:1px solid var(--border);border-radius:5px;overflow:hidden}
+.mp-header{padding:11px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.mp-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.mp-badge{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 10px;border-radius:2px;font-weight:600}
+.mb-hot{background:#FDEEE8;color:#8B3000;border:1px solid #EDB090}
+.mb-warm{background:var(--orange-bg);color:var(--orange);border:1px solid var(--orange-border)}
+.mb-ok{background:var(--green-bg);color:var(--green);border:1px solid #90C0A0}
+.mb-cold{background:var(--blue-bg);color:var(--blue);border:1px solid #A0BFDF}
+
+.mp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--border)}
+.mp-cell{padding:12px 14px;border-right:1px solid var(--border)}
+.mp-cell:last-child{border-right:none}
+.mp-cell-lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin-bottom:5px}
+.mp-cell-val{font-size:16px;font-weight:600;letter-spacing:-.3px;margin-bottom:2px;font-family:'IBM Plex Mono',monospace}
+.mp-cell-sub{font-size:10px;color:var(--muted);font-style:italic}
+
+/* PERCENTILE GAUGE */
+.pct-gauge-wrap{padding:12px 16px;border-bottom:1px solid var(--border)}
+.pct-lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--faint);margin-bottom:8px;display:flex;justify-content:space-between}
+.pct-track{height:10px;border-radius:5px;position:relative;overflow:visible;margin-bottom:6px}
+.pct-fill{height:100%;border-radius:5px;position:absolute;left:0}
+.pct-marker{position:absolute;top:-3px;width:4px;height:16px;border-radius:2px;background:var(--ink);transform:translateX(-50%)}
+.pct-zones{display:grid;grid-template-columns:repeat(4,1fr);margin-top:4px}
+.pz{font-family:'IBM Plex Mono',monospace;font-size:8px;text-align:center;padding:2px}
+
+/* SIGNALS TABLE */
+.signals-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0;border-top:1px solid var(--border)}
+.sig-cell{padding:11px 14px;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.sig-cell:nth-child(2n){border-right:none}
+.sig-cell:nth-last-child(-n+2){border-bottom:none}
+.sig-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.sig-name{font-size:11px;font-weight:600}
+.sig-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-green{background:var(--green)}.dot-red{background:var(--red)}.dot-yellow{background:#D4A840}.dot-gray{background:var(--faint)}
+.sig-val{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600}
+.sig-desc{font-size:10px;color:var(--muted);font-style:italic;margin-top:2px}
+
+/* 4-METRIC ROW */
+.metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.mcard{background:white;border:1px solid var(--border);border-radius:4px;padding:12px 14px;position:relative;overflow:hidden}
+.mcard::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.mc-gold::after{background:var(--gold-mid)}.mc-blue::after{background:#3A7ABF}
+.mc-green::after{background:#2A8A4A}.mc-red::after{background:#BF3A3A}
+.mc-teal::after{background:var(--teal)}
+.mc-lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint);margin-bottom:5px}
+.mc-val{font-size:17px;font-weight:600;line-height:1;margin-bottom:3px;letter-spacing:-.3px}
+.mc-sub{font-size:10px;color:var(--muted);font-style:italic}
+
+/* SENSITIVITY TABLE */
+.sens-card{background:white;border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.sens-hdr{padding:9px 16px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.sens-hdr-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+table{width:100%;border-collapse:collapse}
+th{padding:8px 14px;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint);background:var(--bg2);border-bottom:1px solid var(--border);font-weight:400}
+td{padding:9px 14px;font-size:11px;border-bottom:1px solid var(--bg3);color:var(--ink2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg2)}
+.td-m{font-family:'IBM Plex Mono',monospace;font-size:10px}
+.td-pos{color:var(--green)}.td-neg{color:var(--red)}
+.mini-bar-wrap{display:flex;align-items:center;gap:5px}
+.mini-bar{height:5px;border-radius:3px;display:inline-block}
+
+/* CHART */
+.chart-card{background:white;border:1px solid var(--border);border-radius:4px;padding:15px 17px}
+.chart-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.chart-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.legend-row{display:flex;gap:12px;flex-wrap:wrap}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+.leg-line{width:14px;height:2px;border-radius:1px}
+.period-row{display:flex;gap:4px}
+.pb{padding:3px 9px;border:1px solid var(--border);background:white;border-radius:2px;font-family:'IBM Plex Mono',monospace;font-size:9px;cursor:pointer;color:var(--muted);transition:all .1s}
+.pb.active{background:var(--ink);color:white;border-color:var(--ink)}
+
+.notif{position:fixed;bottom:20px;right:20px;background:var(--ink);color:#F0EDE6;padding:10px 14px;border-radius:3px;font-size:11px;font-family:'IBM Plex Mono',monospace;z-index:999;opacity:0;transform:translateY(10px);transition:all .2s;pointer-events:none}
+.notif.show{opacity:1;transform:translateY(0)}
+
+@media(max-width:1050px){.page{grid-template-columns:1fr;}.left{position:static;height:auto}.metrics-row{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-brand">◈ GOLD FAIR VALUE CALCULATOR</span>
+  <div class="topbar-pills">
+    <span class="tpill tp-r2" id="top-r2">Post-2022 · R² 96.2%</span>
+    <span class="tpill tp-date">Bloomberg · Feb 2026 · 254 obs</span>
+  </div>
+</div>
+
+<div class="page">
+
+<!-- ══════════ LEFT ══════════ -->
+<div class="left">
+  <div class="left-hdr">
+    <h2>ตั้ง Assumptions → ดูราคาทองที่ควรเป็น</h2>
+    <p>ขยับ slider · ราคาอัปเดตทันที</p>
+  </div>
+
+  <!-- ACTUAL GOLD INPUT -->
+  <div class="actual-input-section">
+    <div class="ai-label">ราคาทองจริงที่ต้องการเปรียบเทียบ</div>
+    <div class="ai-row">
+      <span class="ai-prefix">$</span>
+      <input type="number" class="ai-input" id="actual-input" value="5278.93" min="100" max="20000" step="1" oninput="recalc()">
+      <span class="ai-unit">/ oz</span>
+    </div>
+    <div class="ai-hint">แก้ไขได้ตรงนี้เพื่อเปรียบเทียบกับราคาปัจจุบันหรืออนาคต</div>
+  </div>
+
+  <!-- MODEL TABS -->
+  <div class="model-tabs">
+    <button class="mtab active" id="mtab-post" onclick="selectModel('post',this)">Post-2022 ★ R²=96%</button>
+    <button class="mtab" id="mtab-full" onclick="selectModel('full',this)">Full 8F R²=70%</button>
+  </div>
+
+  <!-- SLIDERS -->
+  <div class="factors-scroll">
+
+    <div class="sec-lbl">Macro Fundamentals</div>
+
+    <div class="fr">
+      <div class="fr-top">
+        <span><span class="fr-name" style="color:#1A4A7A">Real Rate (10Y TIPS)</span><span class="fr-ticker">USGGBE10</span></span>
+        <div class="fr-rhs"><span class="fr-val" id="fv-rr" style="color:#1A4A7A">2.26</span><span class="fr-unit">%</span><span class="fr-chg chg-flat" id="fc-rr"></span></div>
+      </div>
+      <div class="fr-hint">ลด → ทองขึ้น · ปัจจุบัน 2.26%</div>
+      <input type="range" id="sl-rr" min="-3" max="5" step="0.05" value="2.26">
+    </div>
+
+    <div class="fr">
+      <div class="fr-top">
+        <span><span class="fr-name" style="color:#1A6B3A">DXY Dollar Index</span><span class="fr-ticker">DXY Curncy</span></span>
+        <div class="fr-rhs"><span class="fr-val" id="fv-dxy" style="color:#1A6B3A">97.6</span><span class="fr-chg chg-flat" id="fc-dxy"></span></div>
+      </div>
+      <div class="fr-hint">แข็งค่า → ทองลง · ปัจจุบัน 97.6</div>
+      <input type="range" id="sl-dxy" min="80" max="120" step="0.5" value="97.6">
+    </div>
+
+    <div class="fr">
+      <div class="fr-top">
+        <span><span class="fr-name" style="color:#8B2020">CPI YoY (US)</span><span class="fr-ticker">CPI YOY Index</span></span>
+        <div class="fr-rhs"><span class="fr-val" id="fv-cpi" style="color:#8B2020">2.4</span><span class="fr-unit">%</span><span class="fr-chg chg-flat" id="fc-cpi"></span></div>
+      </div>
+      <div class="fr-hint">เงินเฟ้อ · ปัจจุบัน 2.4%</div>
+      <input type="range" id="sl-cpi" min="0" max="12" step="0.1" value="2.4">
+    </div>
+
+    <div class="fr">
+      <div class="fr-top">
+        <span><span class="fr-name" style="color:#7A3A10">WTI Crude Oil</span><span class="fr-ticker">CL1 Comdty</span></span>
+        <div class="fr-rhs"><span class="fr-val" id="fv-wti" style="color:#7A3A10">67.0</span><span class="fr-unit">$/bbl</span><span class="fr-chg chg-flat" id="fc-wti"></span></div>
+      </div>
+      <div class="fr-hint">Indirect ผ่าน CPI · ปัจจุบัน $67.0</div>
+      <input type="range" id="sl-wti" min="20" max="150" step="1" value="67.0">
+    </div>
+
+    <div class="fr">
+      <div class="fr-top">
+        <span><span class="fr-name" style="color:#5A2A7A">VIX Index</span><span class="fr-ticker">VIX Index</span></span>
+        <div class="fr-rhs"><span class="fr-val" id="fv-vix" style="color:#5A2A7A">19.9</span><span class="fr-chg chg-flat" id="fc-vix"></span></div>
+      </div>
+      <div class="fr-hint">สูง = กลัว → Safe haven · ปัจจุบัน 19.9</div>
+      <input type="range" id="sl-vix" min="10" max="80" step="0.5" value="19.9">
+    </div>
+
+    <div class="sec-lbl">Momentum & Demand</div>
+
+    <div class="fr">
+      <div class="fr-top">
+        <span><span class="fr-name" style="color:#C48A2A">Price Momentum (12M)</span><span class="fr-ticker">จาก XAU price</span></span>
+        <div class="fr-rhs"><span class="fr-val" id="fv-momentum" style="color:#C48A2A">0.85</span><span class="fr-unit">× (84.7%)</span><span class="fr-chg chg-flat" id="fc-momentum"></span></div>
+      </div>
+      <div class="fr-hint">12M Return ทอง — ตอนนี้ <strong>ที่ 100th percentile</strong> ของ 20Y history</div>
+      <input type="range" id="sl-momentum" min="-0.5" max="2.0" step="0.01" value="0.85">
+    </div>
+
+    <div class="fr">
+      <div class="fr-top">
+        <span><span class="fr-name" style="color:#2A7A5A">GLD ETF Shares (CB Proxy)</span><span class="fr-ticker">GLD EQY_SH_OUT</span></span>
+        <div class="fr-rhs"><span class="fr-val" id="fv-gld" style="color:#2A7A5A">385.0</span><span class="fr-unit">M shares</span><span class="fr-chg chg-flat" id="fc-gld"></span></div>
+      </div>
+      <div class="fr-hint">Institutional/CB demand proxy · ปัจจุบัน 385.0M</div>
+      <input type="range" id="sl-gld" min="100" max="1200" step="5" value="385.0">
+    </div>
+
+    <div class="fr" id="fr-m2" style="opacity:.45">
+      <div class="fr-top">
+        <span><span class="fr-name" style="color:#2A4A8A">World M2 % GDP</span><span class="fr-ticker">M2MGWWLD Index</span></span>
+        <div class="fr-rhs"><span class="fr-val" id="fv-m2" style="color:#2A4A8A">117.3</span><span class="fr-unit">%</span><span class="fr-chg chg-flat" id="fc-m2"></span></div>
+      </div>
+      <div class="fr-hint">Global liquidity — Full model only · ปัจจุบัน 117.3%</div>
+      <input type="range" id="sl-m2" min="90" max="130" step="0.5" value="117.3">
+    </div>
+
+    <button class="reset-btn" onclick="resetAll()">↺  Reset ทุกค่าเป็น Feb 2026</button>
+  </div>
+</div>
+
+<!-- ══════════ RIGHT ══════════ -->
+<div class="right">
+
+  <!-- HERO -->
+  <div class="hero hero-fair" id="hero">
+    <div class="hero-grid">
+      <div>
+        <div class="hero-lbl" id="hero-lbl">Scenario Fair Value — Post-2022 Model (R² 96%)</div>
+        <div class="hero-price c-gold" id="hero-price" style="color:var(--gold)">—</div>
+        <div class="hero-sub">$/oz · ราคาที่ Model บอกว่าควรเป็น ณ Assumptions นี้</div>
+      </div>
+      <div class="hero-right">
+        <div class="hero-actual-lbl">ราคาจริงที่ใส่</div>
+        <div class="hero-actual" id="hero-actual">—</div>
+        <div class="hero-gap" id="hero-gap">—</div>
+      </div>
+    </div>
+    <div class="verdict" id="verdict">
+      <span class="v-icon" id="v-icon">⚖️</span>
+      <div><div class="v-text" id="v-text">—</div><div class="v-sub" id="v-sub">—</div></div>
+    </div>
+  </div>
+
+  <!-- METRICS ROW -->
+  <div class="metrics-row">
+    <div class="mcard mc-gold"><div class="mc-lbl">Fair Value</div><div class="mc-val" id="m-fair" style="color:var(--gold)">—</div><div class="mc-sub" id="m-fair-sub">Model estimate</div></div>
+    <div class="mcard mc-blue"><div class="mc-lbl">Mispricing</div><div class="mc-val" id="m-misprice">—</div><div class="mc-sub" id="m-misprice-sub">vs Fair Value</div></div>
+    <div class="mcard mc-teal"><div class="mc-lbl">Momentum</div><div class="mc-val" id="m-momentum" style="color:var(--teal)">—</div><div class="mc-sub">12M return · percentile</div></div>
+    <div class="mcard" id="mc-signal"><div class="mc-lbl">Overall Signal</div><div class="mc-val" id="m-signal">—</div><div class="mc-sub" id="m-signal-sub">—</div></div>
+  </div>
+
+  <!-- MOMENTUM HEALTH -->
+  <div class="mom-panel">
+    <div class="mp-header">
+      <span class="mp-title">Momentum Health Dashboard — ไปต่อหรือจะพัก?</span>
+      <span class="mp-badge" id="mom-badge">—</span>
+    </div>
+
+    <!-- 4 momentum stats -->
+    <div class="mp-grid">
+      <div class="mp-cell">
+        <div class="mp-cell-lbl">12M Return</div>
+        <div class="mp-cell-val" id="mom-return" style="color:var(--gold)">—</div>
+        <div class="mp-cell-sub">ปัจจุบัน</div>
+      </div>
+      <div class="mp-cell">
+        <div class="mp-cell-lbl">Percentile (20Y)</div>
+        <div class="mp-cell-val" id="mom-pct" style="color:var(--red)">—</div>
+        <div class="mp-cell-sub">vs ประวัติศาสตร์</div>
+      </div>
+      <div class="mp-cell">
+        <div class="mp-cell-lbl">Fundamental Gap</div>
+        <div class="mp-cell-val" id="mom-fundgap">—</div>
+        <div class="mp-cell-sub">Actual vs Fair</div>
+      </div>
+      <div class="mp-cell">
+        <div class="mp-cell-lbl">GLD Flow Trend</div>
+        <div class="mp-cell-val" id="mom-gld-trend" style="color:var(--green)">+19.2M</div>
+        <div class="mp-cell-sub">3M change (shares)</div>
+      </div>
+    </div>
+
+    <!-- Percentile gauge -->
+    <div class="pct-gauge-wrap">
+      <div class="pct-lbl">
+        <span>Momentum Percentile — ตำแหน่งปัจจุบันใน 20Y History</span>
+        <span id="pct-current-label" style="color:var(--red);font-weight:600">100th</span>
+      </div>
+      <div class="pct-track" style="background:linear-gradient(90deg,#EEF8F2 0%,#FFF8EE 50%,#FDEEE8 75%,#FDF0F0 100%);height:12px;border-radius:6px">
+        <div class="pct-marker" id="pct-marker" style="left:100%"></div>
+      </div>
+      <div class="pct-zones">
+        <div class="pz" style="color:var(--green)">0–25%<br>Cold</div>
+        <div class="pz" style="color:var(--teal)">25–50%<br>Normal</div>
+        <div class="pz" style="color:var(--orange)">50–75%<br>Warm</div>
+        <div class="pz" style="color:var(--red)">75–100%<br>Hot 🔥</div>
+      </div>
+    </div>
+
+    <!-- Signal grid -->
+    <div class="signals-grid">
+      <div class="sig-cell">
+        <div class="sig-top">
+          <span class="sig-name">Momentum Stretch</span>
+          <span class="sig-dot" id="sig-dot-1"></span>
+        </div>
+        <div class="sig-val" id="sig-val-1">—</div>
+        <div class="sig-desc" id="sig-desc-1">—</div>
+      </div>
+      <div class="sig-cell">
+        <div class="sig-top">
+          <span class="sig-name">Fundamental Support</span>
+          <span class="sig-dot" id="sig-dot-2"></span>
+        </div>
+        <div class="sig-val" id="sig-val-2">—</div>
+        <div class="sig-desc" id="sig-desc-2">—</div>
+      </div>
+      <div class="sig-cell">
+        <div class="sig-top">
+          <span class="sig-name">Demand (GLD Flows)</span>
+          <span class="sig-dot" id="sig-dot-3"></span>
+        </div>
+        <div class="sig-val" id="sig-val-3">—</div>
+        <div class="sig-desc" id="sig-desc-3">—</div>
+      </div>
+      <div class="sig-cell">
+        <div class="sig-top">
+          <span class="sig-name">Macro Backdrop</span>
+          <span class="sig-dot" id="sig-dot-4"></span>
+        </div>
+        <div class="sig-val" id="sig-val-4">—</div>
+        <div class="sig-desc" id="sig-desc-4">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SENSITIVITY TABLE -->
+  <div class="sens-card">
+    <div class="sens-hdr">
+      <span class="sens-hdr-title">Factor Sensitivity — ถ้าปรับ 1 หน่วย ราคาเปลี่ยนเท่าไหร่</span>
+      <span id="sens-model-lbl" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--gold)">Post-2022 β</span>
+    </div>
+    <table><thead><tr>
+      <th>Factor</th><th>ค่าปัจจุบัน</th><th>β (Coef)</th>
+      <th>+1 หน่วย → Gold</th><th>−1 หน่วย → Gold</th><th>Weight</th>
+    </tr></thead>
+    <tbody id="sens-tbody"></tbody></table>
+  </div>
+
+  <!-- CHART -->
+  <div class="chart-card">
+    <div class="chart-hdr">
+      <span class="chart-title">Actual vs Fair Value — Historical</span>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="legend-row">
+          <div class="leg-item"><div class="leg-line" style="background:#9A6E1A"></div>Actual</div>
+          <div class="leg-item"><div class="leg-line" style="background:#C48A2A;border-top:1px dashed;height:0"></div>Fair (Post-2022)</div>
+          <div class="leg-item"><div class="leg-line" style="background:#3A7ABF;border-top:1px dashed;height:0"></div>Fair (Full 8F)</div>
+          <div class="leg-item" id="leg-scen" style="display:none"><div class="leg-line" style="background:var(--teal);height:3px"></div>Scenario</div>
+        </div>
+        <div class="period-row">
+          <button class="pb" onclick="setPeriod(60,this)">5Y</button>
+          <button class="pb" onclick="setPeriod(120,this)">10Y</button>
+          <button class="pb active" onclick="setPeriod(0,this)">All</button>
+        </div>
+      </div>
+    </div>
+    <canvas id="mainChart" style="max-height:250px"></canvas>
+  </div>
+
+</div>
+</div>
+<div class="notif" id="notif"></div>
+
+<script>
+const RAW = [{"date": "2005-01-31", "gold": 422.6, "rr": 2.4913, "dxy": 83.57, "cpi": 3.0, "wti": 48.2, "vix": 12.82, "gld": 48.9, "m2": null, "momentum": null, "fair_post": null, "fair_full": null}, {"date": "2005-02-28", "gold": 435.65, "rr": 2.6742, "dxy": 82.51, "cpi": 3.0, "wti": 51.75, "vix": 12.08, "gld": 50.8, "m2": null, "momentum": null, "fair_post": null, "fair_full": null}, {"date": "2005-03-31", "gold": 428.35, "rr": 2.7102, "dxy": 84.06, "cpi": 3.1, "wti": 55.4, "vix": 14.02, "gld": 52.8, "m2": null, "momentum": null, "fair_post": null, "fair_full": null}, {"date": "2005-04-29", "gold": 434.4, "rr": 2.6026, "dxy": 84.43, "cpi": 3.5, "wti": 49.72, "vix": 15.31, "gld": 57.6, "m2": null, "momentum": null, "fair_post": null, "fair_full": null}, {"date": "2005-05-31", "gold": 417.25, "rr": 2.3774, "dxy": 87.76, "cpi": 2.8, "wti": 51.97, "vix": 13.29, "gld": 57.7, "m2": null, "momentum": null, "fair_post": null, "fair_full": null}, {"date": "2005-06-30", "gold": 435.5, "rr": 2.2739, "dxy": 89.09, "cpi": 2.5, "wti": 56.5, "vix": 12.04, "gld": 56.5, "m2": null, "momentum": null, "fair_post": null, "fair_full": null}, {"date": "2005-07-29", "gold": 429.8, "rr": 2.3806, "dxy": 89.35, "cpi": 3.2, "wti": 60.57, "vix": 11.57, "gld": 60.5, "m2": null, "momentum": null, "fair_post": null, "fair_full": null}, {"date": "2005-08-31", "gold": 435.2, "rr": 2.373, "dxy": 87.58, "cpi": 3.6, "wti": 68.94, "vix": 12.6, "gld": 62.7, "m2": null, "momentum": null, "fair_post": null, "fair_full": null}, {"date": "2005-09-30", "gold": 469.3, "rr": 2.5628, "dxy": 89.52, "cpi": 4.7, "wti": 66.24, "vix": 11.92, "gld": 66.9, "m2": null, "momentum": null, "fair_post": null, "fair_full": null}, {"date": "2005-10-31", "gold": 465.19, "rr": 2.5658, "dxy": 90.07, "cpi": 4.3, "wti": 59.76, "vix": 15.32, "gld": 68.2, "m2": null, "momentum": null, "fair_post": null, "fair_full": null}, {"date": "2005-11-30", "gold": 493.08, "rr": 2.3695, "dxy": 91.57, "cpi": 3.5, "wti": 57.32, "vix": 12.06, "gld": 74.0, "m2": null, "momentum": null, "fair_post": null, "fair_full": null}, {"date": "2005-12-30", "gold": 517.0, "rr": 2.3368, "dxy": 91.17, "cpi": 3.4, "wti": 61.04, "vix": 12.07, "gld": 85.0, "m2": 96.21, "momentum": null, "fair_post": null, "fair_full": null}, {"date": "2006-01-31", "gold": 568.9, "rr": 2.5328, "dxy": 88.96, "cpi": 4.0, "wti": 67.92, "vix": 12.95, "gld": 107.8, "m2": 96.21, "momentum": 0.3462, "fair_post": 3791.79, "fair_full": 871.95, "misprice_pct": -85.0}, {"date": "2006-02-28", "gold": 561.55, "rr": 2.553, "dxy": 90.11, "cpi": 3.6, "wti": 61.41, "vix": 12.34, "gld": 110.8, "m2": 96.21, "momentum": 0.289, "fair_post": 3606.83, "fair_full": 793.9, "misprice_pct": -84.43}, {"date": "2006-03-31", "gold": 583.65, "rr": 2.5099, "dxy": 89.73, "cpi": 3.4, "wti": 66.63, "vix": 11.39, "gld": 112.4, "m2": 96.21, "momentum": 0.3626, "fair_post": 3769.0, "fair_full": 953.34, "misprice_pct": -84.51}, {"date": "2006-04-28", "gold": 654.43, "rr": 2.6722, "dxy": 86.11, "cpi": 3.5, "wti": 71.88, "vix": 11.59, "gld": 115.9, "m2": 96.21, "momentum": 0.5065, "fair_post": 4499.2, "fair_full": 1198.15, "misprice_pct": -85.45}, {"date": "2006-05-31", "gold": 645.2, "rr": 2.6605, "dxy": 84.72, "cpi": 4.2, "wti": 71.29, "vix": 16.44, "gld": 113.7, "m2": 96.21, "momentum": 0.5463, "fair_post": 4734.54, "fair_full": 1190.09, "misprice_pct": -86.37}, {"date": "2006-06-30", "gold": 615.85, "rr": 2.6042, "dxy": 85.16, "cpi": 4.3, "wti": 73.93, "vix": 13.08, "gld": 120.3, "m2": 96.21, "momentum": 0.4141, "fair_post": 4170.2, "fair_full": 944.42, "misprice_pct": -85.23}, {"date": "2006-07-31", "gold": 636.75, "rr": 2.5756, "dxy": 85.3, "cpi": 4.1, "wti": 74.4, "vix": 14.95, "gld": 124.5, "m2": 96.21, "momentum": 0.4815, "fair_post": 4347.04, "fair_full": 1104.39, "misprice_pct": -85.35}, {"date": "2006-08-31", "gold": 627.3, "rr": 2.4868, "dxy": 85.05, "cpi": 3.8, "wti": 70.26, "vix": 12.31, "gld": 126.9, "m2": 96.21, "momentum": 0.4414, "fair_post": 4178.25, "fair_full": 956.66, "misprice_pct": -84.99}, {"date": "2006-09-29", "gold": 598.3, "rr": 2.3553, "dxy": 86.03, "cpi": 2.1, "wti": 62.91, "vix": 11.98, "gld": 125.1, "m2": 96.21, "momentum": 0.2749, "fair_post": 3266.18, "fair_full": 717.38, "misprice_pct": -81.68}, {"date": "2006-10-31", "gold": 606.6, "rr": 2.2685, "dxy": 85.32, "cpi": 1.3, "wti": 58.73, "vix": 11.1, "gld": 125.9, "m2": 96.21, "momentum": 0.304, "fair_post": 3290.55, "fair_full": 734.43, "misprice_pct": -81.57}, {"date": "2006-11-30", "gold": 648.0, "rr": 2.3088, "dxy": 82.95, "cpi": 2.0, "wti": 63.13, "vix": 10.91, "gld": 143.1, "m2": 96.21, "momentum": 0.3142, "fair_post": 3463.38, "fair_full": 696.98, "misprice_pct": -81.29}, {"date": "2006-12-29", "gold": 636.7, "rr": 2.2983, "dxy": 83.65, "cpi": 2.5, "wti": 61.05, "vix": 11.56, "gld": 146.9, "m2": 97.08, "momentum": 0.2315, "fair_post": 3207.74, "fair_full": 551.27, "misprice_pct": -80.15}, {"date": "2007-01-31", "gold": 653.2, "rr": 2.4245, "dxy": 84.6, "cpi": 2.1, "wti": 58.14, "vix": 10.42, "gld": 147.0, "m2": 97.08, "momentum": 0.1482, "fair_post": 2964.13, "fair_full": 486.08, "misprice_pct": -77.96}, {"date": "2007-02-28", "gold": 669.35, "rr": 2.3784, "dxy": 83.57, "cpi": 2.4, "wti": 61.79, "vix": 15.42, "gld": 156.1, "m2": 97.08, "momentum": 0.192, "fair_post": 3048.92, "fair_full": 580.47, "misprice_pct": -78.05}, {"date": "2007-03-30", "gold": 663.8, "rr": 2.4427, "dxy": 82.93, "cpi": 2.8, "wti": 65.87, "vix": 14.64, "gld": 157.0, "m2": 97.08, "momentum": 0.1373, "fair_post": 2908.25, "fair_full": 484.44, "misprice_pct": -77.18}, {"date": "2007-04-30", "gold": 678.45, "rr": 2.4361, "dxy": 81.447, "cpi": 2.6, "wti": 65.71, "vix": 14.22, "gld": 160.1, "m2": 97.08, "momentum": 0.0367, "fair_post": 2529.59, "fair_full": 270.53, "misprice_pct": -73.18}, {"date": "2007-05-31", "gold": 660.5, "rr": 2.3893, "dxy": 82.301, "cpi": 2.7, "wti": 64.01, "vix": 13.05, "gld": 152.0, "m2": 97.08, "momentum": 0.0237, "fair_post": 2471.15, "fair_full": 206.98, "misprice_pct": -73.27}, {"date": "2007-06-29", "gold": 649.65, "rr": 2.3851, "dxy": 81.92, "cpi": 2.7, "wti": 70.68, "vix": 16.23, "gld": 150.8, "m2": 97.08, "momentum": 0.0549, "fair_post": 2454.51, "fair_full": 336.16, "misprice_pct": -73.53}, {"date": "2007-07-31", "gold": 664.3, "rr": 2.3964, "dxy": 80.77, "cpi": 2.4, "wti": 78.21, "vix": 23.52, "gld": 161.3, "m2": 97.08, "momentum": 0.0433, "fair_post": 2197.62, "fair_full": 464.35, "misprice_pct": -69.77}, {"date": "2007-08-31", "gold": 673.3, "rr": 2.2717, "dxy": 80.791, "cpi": 2.0, "wti": 74.04, "vix": 23.38, "gld": 167.5, "m2": 97.08, "momentum": 0.0733, "fair_post": 2220.99, "fair_full": 474.62, "misprice_pct": -69.68}, {"date": "2007-09-28", "gold": 743.6, "rr": 2.3162, "dxy": 77.719, "cpi": 2.8, "wti": 81.66, "vix": 18.0, "gld": 187.9, "m2": 97.08, "momentum": 0.2429, "fair_post": 3068.22, "fair_full": 675.53, "misprice_pct": -75.76}, {"date": "2007-10-31", "gold": 796.8, "rr": 2.3562, "dxy": 76.479, "cpi": 3.5, "wti": 94.53, "vix": 18.53, "gld": 194.3, "m2": 97.08, "momentum": 0.3136, "fair_post": 3301.2, "fair_full": 848.1, "misprice_pct": -75.86}, {"date": "2007-11-30", "gold": 783.55, "rr": 2.3645, "dxy": 76.147, "cpi": 4.3, "wti": 88.71, "vix": 22.87, "gld": 195.7, "m2": 97.08, "momentum": 0.2092, "fair_post": 3063.02, "fair_full": 574.28, "misprice_pct": -74.42}, {"date": "2007-12-31", "gold": 833.7, "rr": 2.3324, "dxy": 76.695, "cpi": 4.1, "wti": 95.98, "vix": 22.5, "gld": 204.3, "m2": 97.68, "momentum": 0.3094, "fair_post": 3272.42, "fair_full": 876.2, "misprice_pct": -74.52}, {"date": "2008-01-31", "gold": 926.1, "rr": 2.3187, "dxy": 75.178, "cpi": 4.3, "wti": 91.75, "vix": 26.2, "gld": 205.7, "m2": 97.68, "momentum": 0.4178, "fair_post": 3779.35, "fair_full": 991.27, "misprice_pct": -75.5}, {"date": "2008-02-29", "gold": 973.9, "rr": 2.4398, "dxy": 73.714, "cpi": 4.0, "wti": 101.84, "vix": 26.54, "gld": 208.2, "m2": 97.68, "momentum": 0.455, "fair_post": 3859.36, "fair_full": 1183.45, "misprice_pct": -74.77}, {"date": "2008-03-31", "gold": 916.9, "rr": 2.3246, "dxy": 71.802, "cpi": 4.0, "wti": 101.58, "vix": 25.61, "gld": 209.1, "m2": 97.68, "momentum": 0.3813, "fair_post": 3543.38, "fair_full": 930.49, "misprice_pct": -74.12}, {"date": "2008-04-30", "gold": 877.55, "rr": 2.2798, "dxy": 72.509, "cpi": 3.9, "wti": 113.46, "vix": 20.79, "gld": 189.1, "m2": 97.68, "momentum": 0.2935, "fair_post": 2996.27, "fair_full": 815.77, "misprice_pct": -70.71}, {"date": "2008-05-30", "gold": 886.5, "rr": 2.525, "dxy": 72.879, "cpi": 4.2, "wti": 127.35, "vix": 17.83, "gld": 194.8, "m2": 97.68, "momentum": 0.3422, "fair_post": 3239.49, "fair_full": 1099.45, "misprice_pct": -72.63}, {"date": "2008-06-30", "gold": 925.4, "rr": 2.543, "dxy": 72.463, "cpi": 5.0, "wti": 140.0, "vix": 23.95, "gld": 210.0, "m2": 97.68, "momentum": 0.4245, "fair_post": 3425.16, "fair_full": 1370.06, "misprice_pct": -72.98}, {"date": "2008-07-31", "gold": 914.1, "rr": 2.307, "dxy": 73.227, "cpi": 5.6, "wti": 124.08, "vix": 22.94, "gld": 219.6, "m2": 97.68, "momentum": 0.376, "fair_post": 3368.71, "fair_full": 1023.42, "misprice_pct": -72.86}, {"date": "2008-08-29", "gold": 831.15, "rr": 2.1454, "dxy": 77.381, "cpi": 5.4, "wti": 115.46, "vix": 20.65, "gld": 212.5, "m2": 97.68, "momentum": 0.2344, "fair_post": 2698.47, "fair_full": 752.84, "misprice_pct": -69.2}, {"date": "2008-09-30", "gold": 870.95, "rr": 1.5857, "dxy": 79.448, "cpi": 4.9, "wti": 100.64, "vix": 39.39, "gld": 246.5, "m2": 97.68, "momentum": 0.1713, "fair_post": 1857.49, "fair_full": 630.72, "misprice_pct": -53.11}, {"date": "2008-10-31", "gold": 723.85, "rr": 0.9087, "dxy": 85.633, "cpi": 3.7, "wti": 67.81, "vix": 59.89, "gld": 244.6, "m2": 97.68, "momentum": -0.0916, "fair_post": 185.68, "fair_full": 92.87, "misprice_pct": 289.84}, {"date": "2008-11-28", "gold": 818.05, "rr": 0.3562, "dxy": 86.517, "cpi": 1.1, "wti": 54.43, "vix": 55.84, "gld": 247.6, "m2": 97.68, "momentum": 0.044, "fair_post": 119.35, "fair_full": 211.63, "misprice_pct": 585.42}, {"date": "2008-12-31", "gold": 882.05, "rr": 0.0889, "dxy": 81.308, "cpi": 0.1, "wti": 44.6, "vix": 40.0, "gld": 254.9, "m2": 101.43, "momentum": 0.058, "fair_post": 305.97, "fair_full": -55.11, "misprice_pct": 188.28}, {"date": "2009-01-30", "gold": 927.85, "rr": 1.095, "dxy": 85.999, "cpi": 0.0, "wti": 41.68, "vix": 44.84, "gld": 275.7, "m2": 101.43, "momentum": 0.0019, "fair_post": 772.8, "fair_full": 485.55, "misprice_pct": 20.06}, {"date": "2009-02-27", "gold": 942.32, "rr": 0.9918, "dxy": 88.008, "cpi": 0.2, "wti": 44.76, "vix": 46.35, "gld": 336.5, "m2": 101.43, "momentum": -0.0324, "fair_post": 455.52, "fair_full": 591.78, "misprice_pct": 106.87}, {"date": "2009-03-31", "gold": 919.35, "rr": 1.3092, "dxy": 85.43, "cpi": -0.4, "wti": 49.66, "vix": 44.14, "gld": 368.7, "m2": 101.43, "momentum": 0.0027, "fair_post": 795.55, "fair_full": 833.56, "misprice_pct": 15.56}, {"date": "2009-04-30", "gold": 888.2, "rr": 1.4731, "dxy": 84.614, "cpi": -0.7, "wti": 51.12, "vix": 36.5, "gld": 361.3, "m2": 101.43, "momentum": 0.0121, "fair_post": 1020.96, "fair_full": 843.63, "misprice_pct": -13.0}, {"date": "2009-05-29", "gold": 979.18, "rr": 1.8399, "dxy": 79.348, "cpi": -1.3, "wti": 66.31, "vix": 28.92, "gld": 366.1, "m2": 101.43, "momentum": 0.1045, "fair_post": 1604.05, "fair_full": 1106.99, "misprice_pct": -38.96}, {"date": "2009-06-30", "gold": 926.5, "rr": 1.767, "dxy": 80.133, "cpi": -1.4, "wti": 69.89, "vix": 26.35, "gld": 366.8, "m2": 101.43, "momentum": 0.0012, "fair_post": 1075.78, "fair_full": 940.07, "misprice_pct": -13.88}, {"date": "2009-07-31", "gold": 954.0, "rr": 1.7728, "dxy": 78.347, "cpi": -2.1, "wti": 69.45, "vix": 25.92, "gld": 351.3, "m2": 101.43, "momentum": 0.0436, "fair_post": 1209.34, "fair_full": 980.39, "misprice_pct": -21.11}, {"date": "2009-08-31", "gold": 951.19, "rr": 1.6559, "dxy": 78.172, "cpi": -1.5, "wti": 69.96, "vix": 26.01, "gld": 347.8, "m2": 101.43, "momentum": 0.1444, "fair_post": 1587.48, "fair_full": 1051.12, "misprice_pct": -40.08}, {"date": "2009-09-30", "gold": 1007.7, "rr": 1.7721, "dxy": 76.653, "cpi": -1.3, "wti": 70.61, "vix": 25.61, "gld": 358.9, "m2": 101.43, "momentum": 0.157, "fair_post": 1800.64, "fair_full": 1074.41, "misprice_pct": -44.04}, {"date": "2009-10-30", "gold": 1045.45, "rr": 2.0153, "dxy": 76.3, "cpi": -0.2, "wti": 77.0, "vix": 30.69, "gld": 361.7, "m2": 101.43, "momentum": 0.4443, "fair_post": 3133.19, "fair_full": 1685.5, "misprice_pct": -66.63}, {"date": "2009-11-30", "gold": 1179.63, "rr": 2.1166, "dxy": 74.879, "cpi": 1.8, "wti": 77.28, "vix": 24.51, "gld": 370.5, "m2": 101.43, "momentum": 0.442, "fair_post": 3607.49, "fair_full": 1459.1, "misprice_pct": -67.3}, {"date": "2009-12-31", "gold": 1096.98, "rr": 2.4073, "dxy": 77.86, "cpi": 2.7, "wti": 79.36, "vix": 21.68, "gld": 371.8, "m2": 112.55, "momentum": 0.2437, "fair_post": 3121.26, "fair_full": 1640.87, "misprice_pct": -64.85}, {"date": "2010-01-29", "gold": 1081.2, "rr": 2.3186, "dxy": 79.462, "cpi": 2.6, "wti": 72.89, "vix": 24.62, "gld": 364.8, "m2": 112.55, "momentum": 0.1653, "fair_post": 2747.49, "fair_full": 1484.34, "misprice_pct": -60.65}, {"date": "2010-02-26", "gold": 1117.59, "rr": 2.1568, "dxy": 80.362, "cpi": 2.1, "wti": 79.66, "vix": 19.5, "gld": 363.3, "m2": 112.55, "momentum": 0.186, "fair_post": 2549.94, "fair_full": 1541.3, "misprice_pct": -56.17}, {"date": "2010-03-31", "gold": 1113.25, "rr": 2.2591, "dxy": 81.073, "cpi": 2.3, "wti": 83.76, "vix": 17.59, "gld": 370.9, "m2": 112.55, "momentum": 0.2109, "fair_post": 2699.84, "fair_full": 1668.36, "misprice_pct": -58.77}, {"date": "2010-04-30", "gold": 1179.03, "rr": 2.3986, "dxy": 81.866, "cpi": 2.2, "wti": 86.15, "vix": 22.05, "gld": 380.6, "m2": 112.55, "momentum": 0.3274, "fair_post": 3143.62, "fair_full": 2050.12, "misprice_pct": -62.49}, {"date": "2010-05-31", "gold": 1216.3, "rr": 2.0462, "dxy": 86.588, "cpi": 2.0, "wti": 73.97, "vix": 32.07, "gld": 416.5, "m2": 112.55, "momentum": 0.2422, "fair_post": 2423.37, "fair_full": 1984.93, "misprice_pct": -49.81}, {"date": "2010-06-30", "gold": 1242.38, "rr": 1.8443, "dxy": 86.019, "cpi": 1.1, "wti": 75.63, "vix": 34.54, "gld": 433.9, "m2": 112.55, "momentum": 0.3409, "fair_post": 2470.4, "fair_full": 2208.34, "misprice_pct": -49.71}, {"date": "2010-07-30", "gold": 1181.0, "rr": 1.7691, "dxy": 81.539, "cpi": 1.2, "wti": 78.95, "vix": 23.5, "gld": 421.5, "m2": 112.55, "momentum": 0.2379, "fair_post": 2227.19, "fair_full": 1735.74, "misprice_pct": -46.97}, {"date": "2010-08-31", "gold": 1247.4, "rr": 1.5487, "dxy": 83.202, "cpi": 1.1, "wti": 71.92, "vix": 26.05, "gld": 428.3, "m2": 112.55, "momentum": 0.3114, "fair_post": 2349.8, "fair_full": 1814.0, "misprice_pct": -46.91}, {"date": "2010-09-30", "gold": 1308.54, "rr": 1.8174, "dxy": 78.72, "cpi": 1.1, "wti": 79.97, "vix": 23.7, "gld": 429.2, "m2": 112.55, "momentum": 0.2985, "fair_post": 2551.74, "fair_full": 1800.57, "misprice_pct": -48.72}, {"date": "2010-10-29", "gold": 1359.4, "rr": 2.1518, "dxy": 77.266, "cpi": 1.2, "wti": 81.43, "vix": 21.2, "gld": 425.5, "m2": 112.55, "momentum": 0.3003, "fair_post": 2902.81, "fair_full": 1864.83, "misprice_pct": -53.17}, {"date": "2010-11-30", "gold": 1386.23, "rr": 2.1071, "dxy": 81.195, "cpi": 1.1, "wti": 84.11, "vix": 23.54, "gld": 423.5, "m2": 112.55, "momentum": 0.1751, "fair_post": 2177.62, "fair_full": 1811.36, "misprice_pct": -36.34}, {"date": "2010-12-31", "gold": 1421.4, "rr": 2.2777, "dxy": 79.028, "cpi": 1.5, "wti": 91.38, "vix": 17.75, "gld": 421.7, "m2": 109.36, "momentum": 0.2957, "fair_post": 2866.77, "fair_full": 1880.75, "misprice_pct": -50.42}, {"date": "2011-01-31", "gold": 1332.68, "rr": 2.317, "dxy": 77.735, "cpi": 1.6, "wti": 92.19, "vix": 19.53, "gld": 404.2, "m2": 109.36, "momentum": 0.2326, "fair_post": 2668.57, "fair_full": 1722.57, "misprice_pct": -50.06}, {"date": "2011-02-28", "gold": 1411.33, "rr": 2.4058, "dxy": 76.889, "cpi": 2.1, "wti": 96.97, "vix": 18.35, "gld": 399.0, "m2": 109.36, "momentum": 0.2628, "fair_post": 2894.94, "fair_full": 1762.24, "misprice_pct": -51.25}, {"date": "2011-03-31", "gold": 1432.2, "rr": 2.4917, "dxy": 75.857, "cpi": 2.7, "wti": 106.72, "vix": 17.74, "gld": 399.2, "m2": 109.36, "momentum": 0.2865, "fair_post": 3026.27, "fair_full": 1835.2, "misprice_pct": -52.67}, {"date": "2011-04-29", "gold": 1563.7, "rr": 2.5722, "dxy": 72.933, "cpi": 3.2, "wti": 113.93, "vix": 14.75, "gld": 405.4, "m2": 109.36, "momentum": 0.3263, "fair_post": 3325.3, "fair_full": 1844.0, "misprice_pct": -52.98}, {"date": "2011-05-31", "gold": 1535.73, "rr": 2.2427, "dxy": 74.638, "cpi": 3.6, "wti": 102.7, "vix": 15.45, "gld": 399.3, "m2": 109.36, "momentum": 0.2626, "fair_post": 2979.17, "fair_full": 1511.43, "misprice_pct": -48.45}, {"date": "2011-06-30", "gold": 1500.18, "rr": 2.3832, "dxy": 74.303, "cpi": 3.6, "wti": 95.42, "vix": 16.52, "gld": 398.6, "m2": 109.36, "momentum": 0.2075, "fair_post": 2994.52, "fair_full": 1401.59, "misprice_pct": -49.9}, {"date": "2011-07-29", "gold": 1627.05, "rr": 2.4371, "dxy": 73.897, "cpi": 3.6, "wti": 95.7, "vix": 25.25, "gld": 417.0, "m2": 109.36, "momentum": 0.3777, "fair_post": 3606.15, "fair_full": 1830.45, "misprice_pct": -54.88}, {"date": "2011-08-31", "gold": 1825.55, "rr": 2.074, "dxy": 74.117, "cpi": 3.8, "wti": 88.81, "vix": 31.62, "gld": 406.8, "m2": 109.36, "momentum": 0.4635, "fair_post": 3691.38, "fair_full": 1800.71, "misprice_pct": -50.55}, {"date": "2011-09-30", "gold": 1623.79, "rr": 1.7583, "dxy": 78.553, "cpi": 3.9, "wti": 79.2, "vix": 42.96, "gld": 406.8, "m2": 109.36, "momentum": 0.2409, "fair_post": 2457.29, "fair_full": 1438.57, "misprice_pct": -33.92}, {"date": "2011-10-31", "gold": 1714.7, "rr": 2.0788, "dxy": 76.166, "cpi": 3.5, "wti": 93.19, "vix": 29.96, "gld": 410.8, "m2": 109.36, "momentum": 0.2614, "fair_post": 2753.02, "fair_full": 1573.76, "misprice_pct": -37.72}, {"date": "2011-11-30", "gold": 1746.35, "rr": 2.0589, "dxy": 78.384, "cpi": 3.4, "wti": 100.36, "vix": 27.8, "gld": 429.1, "m2": 109.36, "momentum": 0.2598, "fair_post": 2564.64, "fair_full": 1728.3, "misprice_pct": -31.91}, {"date": "2011-12-30", "gold": 1564.91, "rr": 1.9507, "dxy": 80.178, "cpi": 3.0, "wti": 98.83, "vix": 23.4, "gld": 414.7, "m2": 111.11, "momentum": 0.101, "fair_post": 1822.25, "fair_full": 1479.36, "misprice_pct": -14.12}, {"date": "2012-01-31", "gold": 1737.76, "rr": 2.0983, "dxy": 79.288, "cpi": 2.9, "wti": 98.48, "vix": 19.44, "gld": 420.3, "m2": 111.11, "momentum": 0.304, "fair_post": 2806.85, "fair_full": 1848.14, "misprice_pct": -38.09}, {"date": "2012-02-29", "gold": 1696.76, "rr": 2.2683, "dxy": 78.737, "cpi": 2.9, "wti": 107.07, "vix": 18.43, "gld": 427.9, "m2": 111.11, "momentum": 0.2022, "fair_post": 2441.28, "fair_full": 1802.23, "misprice_pct": -30.5}, {"date": "2012-03-30", "gold": 1668.15, "rr": 2.3398, "dxy": 79.004, "cpi": 2.7, "wti": 103.02, "vix": 15.5, "gld": 425.7, "m2": 111.11, "momentum": 0.1647, "fair_post": 2419.34, "fair_full": 1723.1, "misprice_pct": -31.05}, {"date": "2012-04-30", "gold": 1664.75, "rr": 2.2632, "dxy": 78.776, "cpi": 2.3, "wti": 104.87, "vix": 17.15, "gld": 423.1, "m2": 111.11, "momentum": 0.0646, "fair_post": 1861.95, "fair_full": 1569.25, "misprice_pct": -10.59}, {"date": "2012-05-31", "gold": 1560.51, "rr": 2.0884, "dxy": 83.043, "cpi": 1.7, "wti": 86.53, "vix": 24.06, "gld": 420.6, "m2": 111.11, "momentum": 0.0161, "fair_post": 1527.49, "fair_full": 1502.92, "misprice_pct": 2.16}, {"date": "2012-06-29", "gold": 1597.45, "rr": 2.0968, "dxy": 81.627, "cpi": 1.7, "wti": 84.96, "vix": 17.08, "gld": 423.8, "m2": 111.11, "momentum": 0.0648, "fair_post": 1876.44, "fair_full": 1470.32, "misprice_pct": -14.87}, {"date": "2012-07-31", "gold": 1614.58, "rr": 2.177, "dxy": 82.635, "cpi": 1.4, "wti": 88.06, "vix": 18.93, "gld": 414.8, "m2": 111.11, "momentum": -0.0077, "fair_post": 1515.95, "fair_full": 1464.51, "misprice_pct": 6.51}, {"date": "2012-08-31", "gold": 1691.85, "rr": 2.2602, "dxy": 81.208, "cpi": 1.7, "wti": 96.47, "vix": 17.47, "gld": 427.4, "m2": 111.11, "momentum": -0.0732, "fair_post": 1295.72, "fair_full": 1394.41, "misprice_pct": 30.57}, {"date": "2012-09-28", "gold": 1772.25, "rr": 2.4223, "dxy": 79.935, "cpi": 2.0, "wti": 92.19, "vix": 15.73, "gld": 437.9, "m2": 111.11, "momentum": 0.0914, "fair_post": 2245.87, "fair_full": 1646.58, "misprice_pct": -21.09}, {"date": "2012-10-31", "gold": 1720.65, "rr": 2.4971, "dxy": 79.919, "cpi": 2.2, "wti": 86.24, "vix": 18.6, "gld": 443.2, "m2": 111.11, "momentum": 0.0035, "fair_post": 2053.6, "fair_full": 1485.48, "misprice_pct": -16.21}, {"date": "2012-11-30", "gold": 1714.98, "rr": 2.4222, "dxy": 80.153, "cpi": 1.8, "wti": 88.91, "vix": 15.87, "gld": 447.5, "m2": 111.11, "momentum": -0.018, "fair_post": 1833.28, "fair_full": 1467.19, "misprice_pct": -6.45}, {"date": "2012-12-31", "gold": 1675.35, "rr": 2.4518, "dxy": 79.769, "cpi": 1.7, "wti": 91.82, "vix": 18.02, "gld": 448.3, "m2": 113.28, "momentum": 0.0706, "fair_post": 2128.67, "fair_full": 1757.54, "misprice_pct": -21.3}, {"date": "2013-01-31", "gold": 1663.7, "rr": 2.5644, "dxy": 79.207, "cpi": 1.6, "wti": 97.49, "vix": 14.28, "gld": 440.9, "m2": 113.28, "momentum": -0.0426, "fair_post": 1736.58, "fair_full": 1595.55, "misprice_pct": -4.2}, {"date": "2013-02-28", "gold": 1579.61, "rr": 2.5419, "dxy": 81.949, "cpi": 2.0, "wti": 92.05, "vix": 15.51, "gld": 416.6, "m2": 113.28, "momentum": -0.069, "fair_post": 1666.13, "fair_full": 1514.07, "misprice_pct": -5.19}, {"date": "2013-03-29", "gold": 1597.5, "rr": 2.5179, "dxy": 82.976, "cpi": 1.5, "wti": 97.23, "vix": 12.7, "gld": 405.7, "m2": 113.28, "momentum": -0.0424, "fair_post": 1601.06, "fair_full": 1631.44, "misprice_pct": -0.22}, {"date": "2013-04-30", "gold": 1476.71, "rr": 2.3434, "dxy": 81.746, "cpi": 1.1, "wti": 93.46, "vix": 13.52, "gld": 358.4, "m2": 113.28, "momentum": -0.113, "fair_post": 1205.55, "fair_full": 1311.12, "misprice_pct": 22.49}, {"date": "2013-05-31", "gold": 1387.8, "rr": 2.1887, "dxy": 83.375, "cpi": 1.4, "wti": 91.97, "vix": 16.3, "gld": 336.8, "m2": 113.28, "momentum": -0.1107, "fair_post": 1071.05, "fair_full": 1252.79, "misprice_pct": 29.57}, {"date": "2013-06-28", "gold": 1234.53, "rr": 1.9899, "dxy": 83.136, "cpi": 1.8, "wti": 96.56, "vix": 16.86, "gld": 322.4, "m2": 113.28, "momentum": -0.2272, "fair_post": 430.97, "fair_full": 941.49, "misprice_pct": 186.45}, {"date": "2013-07-31", "gold": 1325.07, "rr": 2.2046, "dxy": 81.452, "cpi": 2.0, "wti": 105.03, "vix": 13.45, "gld": 308.5, "m2": 113.28, "momentum": -0.1793, "fair_post": 781.58, "fair_full": 1058.22, "misprice_pct": 69.54}, {"date": "2013-08-30", "gold": 1395.27, "rr": 2.1056, "dxy": 82.087, "cpi": 1.5, "wti": 107.65, "vix": 17.01, "gld": 306.5, "m2": 113.28, "momentum": -0.1753, "fair_post": 538.61, "fair_full": 1144.28, "misprice_pct": 159.05}, {"date": "2013-09-30", "gold": 1329.03, "rr": 2.1943, "dxy": 80.221, "cpi": 1.2, "wti": 102.33, "vix": 16.6, "gld": 301.6, "m2": 113.28, "momentum": -0.2501, "fair_post": 420.3, "fair_full": 948.28, "misprice_pct": 216.21}, {"date": "2013-10-31", "gold": 1323.06, "rr": 2.1653, "dxy": 80.195, "cpi": 1.0, "wti": 96.38, "vix": 13.75, "gld": 290.4, "m2": 113.28, "momentum": -0.2311, "fair_post": 572.93, "fair_full": 884.28, "misprice_pct": 130.93}, {"date": "2013-11-29", "gold": 1253.35, "rr": 2.1565, "dxy": 80.68, "cpi": 1.2, "wti": 92.72, "vix": 13.7, "gld": 280.9, "m2": 113.28, "momentum": -0.2692, "fair_post": 490.51, "fair_full": 760.1, "misprice_pct": 155.52}, {"date": "2013-12-31", "gold": 1201.64, "rr": 2.2318, "dxy": 80.035, "cpi": 1.5, "wti": 98.42, "vix": 13.72, "gld": 266.0, "m2": 109.63, "momentum": -0.2828, "fair_post": 470.1, "fair_full": 612.5, "misprice_pct": 155.61}, {"date": "2014-01-31", "gold": 1244.55, "rr": 2.1316, "dxy": 81.311, "cpi": 1.6, "wti": 97.49, "vix": 18.41, "gld": 264.4, "m2": 109.63, "momentum": -0.2519, "fair_post": 442.32, "fair_full": 693.61, "misprice_pct": 181.37}, {"date": "2014-02-28", "gold": 1326.39, "rr": 2.182, "dxy": 79.691, "cpi": 1.1, "wti": 102.59, "vix": 14.0, "gld": 268.0, "m2": 109.63, "momentum": -0.1603, "fair_post": 790.25, "fair_full": 877.36, "misprice_pct": 67.84}, {"date": "2014-03-31", "gold": 1284.01, "rr": 2.14, "dxy": 80.1, "cpi": 1.5, "wti": 101.58, "vix": 13.88, "gld": 271.2, "m2": 109.63, "momentum": -0.1962, "fair_post": 677.67, "fair_full": 771.01, "misprice_pct": 89.47}, {"date": "2014-04-30", "gold": 1291.6, "rr": 2.189, "dxy": 79.474, "cpi": 2.0, "wti": 99.74, "vix": 13.41, "gld": 262.9, "m2": 109.63, "momentum": -0.1254, "fair_post": 1120.82, "fair_full": 813.87, "misprice_pct": 15.24}, {"date": "2014-05-30", "gold": 1249.68, "rr": 2.2147, "dxy": 80.369, "cpi": 2.1, "wti": 102.71, "vix": 11.4, "gld": 262.1, "m2": 109.63, "momentum": -0.0995, "fair_post": 1210.05, "fair_full": 899.24, "misprice_pct": 3.28}, {"date": "2014-06-30", "gold": 1327.33, "rr": 2.2439, "dxy": 79.775, "cpi": 2.1, "wti": 105.37, "vix": 11.57, "gld": 264.0, "m2": 109.63, "momentum": 0.0752, "fair_post": 1891.05, "fair_full": 1230.0, "misprice_pct": -29.81}, {"date": "2014-07-31", "gold": 1282.59, "rr": 2.2684, "dxy": 81.456, "cpi": 2.0, "wti": 98.17, "vix": 16.95, "gld": 267.8, "m2": 109.63, "momentum": -0.0321, "fair_post": 1478.72, "fair_full": 1107.93, "misprice_pct": -13.26}, {"date": "2014-08-29", "gold": 1287.32, "rr": 2.1285, "dxy": 82.748, "cpi": 1.7, "wti": 95.96, "vix": 11.98, "gld": 265.6, "m2": 109.63, "momentum": -0.0774, "fair_post": 1200.74, "fair_full": 970.34, "misprice_pct": 7.21}, {"date": "2014-09-30", "gold": 1208.15, "rr": 1.9726, "dxy": 85.936, "cpi": 1.7, "wti": 91.16, "vix": 16.31, "gld": 257.3, "m2": 109.63, "momentum": -0.091, "fair_post": 949.93, "fair_full": 972.77, "misprice_pct": 27.18}, {"date": "2014-10-31", "gold": 1172.94, "rr": 1.9283, "dxy": 86.917, "cpi": 1.7, "wti": 80.54, "vix": 14.03, "gld": 247.8, "m2": 109.63, "momentum": -0.1135, "fair_post": 995.17, "fair_full": 811.64, "misprice_pct": 17.86}, {"date": "2014-11-28", "gold": 1167.38, "rr": 1.8, "dxy": 88.356, "cpi": 1.3, "wti": 66.15, "vix": 13.33, "gld": 240.0, "m2": 109.63, "momentum": -0.0686, "fair_post": 1204.59, "fair_full": 769.98, "misprice_pct": -3.09}, {"date": "2014-12-31", "gold": 1184.37, "rr": 1.6801, "dxy": 90.269, "cpi": 0.8, "wti": 53.27, "vix": 19.2, "gld": 237.2, "m2": 117.32, "momentum": -0.0144, "fair_post": 1324.72, "fair_full": 1131.93, "misprice_pct": -10.59}, {"date": "2015-01-30", "gold": 1283.79, "rr": 1.6448, "dxy": 94.804, "cpi": -0.1, "wti": 48.24, "vix": 20.97, "gld": 253.8, "m2": 117.32, "momentum": 0.0315, "fair_post": 1276.72, "fair_full": 1436.12, "misprice_pct": 0.55}, {"date": "2015-02-27", "gold": 1213.18, "rr": 1.8336, "dxy": 95.293, "cpi": 0.0, "wti": 49.76, "vix": 13.34, "gld": 258.2, "m2": 117.32, "momentum": -0.0854, "fair_post": 1047.6, "fair_full": 1265.21, "misprice_pct": 15.81}, {"date": "2015-03-31", "gold": 1183.57, "rr": 1.7773, "dxy": 98.357, "cpi": -0.1, "wti": 47.6, "vix": 15.29, "gld": 246.9, "m2": 117.32, "momentum": -0.0782, "fair_post": 938.19, "fair_full": 1346.14, "misprice_pct": 26.15}, {"date": "2015-04-30", "gold": 1184.37, "rr": 1.929, "dxy": 94.6, "cpi": -0.2, "wti": 59.63, "vix": 14.55, "gld": 247.7, "m2": 117.32, "momentum": -0.083, "fair_post": 955.01, "fair_full": 1384.35, "misprice_pct": 24.02}, {"date": "2015-05-29", "gold": 1190.58, "rr": 1.8288, "dxy": 96.907, "cpi": 0.0, "wti": 60.3, "vix": 13.84, "gld": 239.9, "m2": 117.32, "momentum": -0.0473, "fair_post": 972.05, "fair_full": 1453.06, "misprice_pct": 22.48}, {"date": "2015-06-30", "gold": 1172.35, "rr": 1.8929, "dxy": 95.485, "cpi": 0.1, "wti": 59.47, "vix": 18.23, "gld": 238.5, "m2": 117.32, "momentum": -0.1168, "fair_post": 767.46, "fair_full": 1329.15, "misprice_pct": 52.76}, {"date": "2015-07-31", "gold": 1095.8, "rr": 1.7453, "dxy": 97.336, "cpi": 0.2, "wti": 47.12, "vix": 12.12, "gld": 225.6, "m2": 117.32, "momentum": -0.1456, "fair_post": 765.75, "fair_full": 1077.52, "misprice_pct": 43.1}, {"date": "2015-08-31", "gold": 1134.93, "rr": 1.6367, "dxy": 95.824, "cpi": 0.2, "wti": 49.2, "vix": 28.43, "gld": 229.0, "m2": 117.32, "momentum": -0.1184, "fair_post": 589.57, "fair_full": 1207.3, "misprice_pct": 92.5}, {"date": "2015-09-30", "gold": 1115.09, "rr": 1.4309, "dxy": 96.35, "cpi": 0.0, "wti": 45.09, "vix": 24.5, "gld": 230.7, "m2": 117.32, "momentum": -0.077, "fair_post": 649.45, "fair_full": 1160.88, "misprice_pct": 71.7}, {"date": "2015-10-30", "gold": 1142.11, "rr": 1.5292, "dxy": 96.946, "cpi": 0.2, "wti": 46.59, "vix": 15.07, "gld": 232.4, "m2": 117.32, "momentum": -0.0263, "fair_post": 1034.57, "fair_full": 1222.68, "misprice_pct": 10.39}, {"date": "2015-11-30", "gold": 1064.77, "rr": 1.6203, "dxy": 100.17, "cpi": 0.5, "wti": 41.65, "vix": 16.13, "gld": 219.9, "m2": 117.32, "momentum": -0.0879, "fair_post": 887.9, "fair_full": 1176.12, "misprice_pct": 19.92}, {"date": "2015-12-31", "gold": 1061.1, "rr": 1.576, "dxy": 98.631, "cpi": 0.7, "wti": 37.04, "vix": 18.21, "gld": 215.8, "m2": 117.32, "momentum": -0.1041, "fair_post": 907.62, "fair_full": 1028.01, "misprice_pct": 16.91}, {"date": "2016-01-29", "gold": 1118.21, "rr": 1.4048, "dxy": 99.606, "cpi": 1.4, "wti": 33.62, "vix": 20.2, "gld": 224.9, "m2": 117.32, "momentum": -0.129, "fair_post": 769.1, "fair_full": 890.07, "misprice_pct": 45.39}, {"date": "2016-02-29", "gold": 1238.67, "rr": 1.4297, "dxy": 98.211, "cpi": 1.0, "wti": 33.75, "vix": 20.55, "gld": 261.3, "m2": 117.32, "momentum": 0.021, "fair_post": 1353.43, "fair_full": 1226.91, "misprice_pct": -8.48}, {"date": "2016-03-31", "gold": 1232.75, "rr": 1.6301, "dxy": 94.586, "cpi": 0.9, "wti": 38.34, "vix": 13.95, "gld": 275.5, "m2": 117.32, "momentum": 0.0416, "fair_post": 1698.43, "fair_full": 1236.92, "misprice_pct": -27.42}, {"date": "2016-04-29", "gold": 1293.53, "rr": 1.7079, "dxy": 93.082, "cpi": 1.1, "wti": 45.92, "vix": 15.7, "gld": 270.5, "m2": 117.32, "momentum": 0.0922, "fair_post": 1890.14, "fair_full": 1365.54, "misprice_pct": -31.56}, {"date": "2016-05-31", "gold": 1215.32, "rr": 1.5797, "dxy": 95.891, "cpi": 1.0, "wti": 49.1, "vix": 14.19, "gld": 292.3, "m2": 117.32, "momentum": 0.0208, "fair_post": 1376.5, "fair_full": 1348.45, "misprice_pct": -11.71}, {"date": "2016-06-30", "gold": 1321.9, "rr": 1.4379, "dxy": 96.143, "cpi": 1.0, "wti": 48.33, "vix": 15.63, "gld": 319.8, "m2": 117.32, "momentum": 0.1276, "fair_post": 1663.14, "fair_full": 1546.92, "misprice_pct": -20.52}, {"date": "2016-07-29", "gold": 1351.28, "rr": 1.4903, "dxy": 95.53, "cpi": 0.8, "wti": 41.6, "vix": 11.87, "gld": 322.6, "m2": 117.32, "momentum": 0.2331, "fair_post": 2263.4, "fair_full": 1660.23, "misprice_pct": -40.3}, {"date": "2016-08-31", "gold": 1308.97, "rr": 1.4694, "dxy": 96.022, "cpi": 1.1, "wti": 44.7, "vix": 13.42, "gld": 317.7, "m2": 117.32, "momentum": 0.1533, "fair_post": 1893.46, "fair_full": 1534.39, "misprice_pct": -30.87}, {"date": "2016-09-30", "gold": 1315.87, "rr": 1.6101, "dxy": 95.463, "cpi": 1.5, "wti": 48.24, "vix": 13.29, "gld": 319.4, "m2": 117.32, "momentum": 0.1801, "fair_post": 2134.7, "fair_full": 1619.5, "misprice_pct": -38.36}, {"date": "2016-10-31", "gold": 1277.21, "rr": 1.7309, "dxy": 98.445, "cpi": 1.6, "wti": 46.86, "vix": 17.06, "gld": 317.7, "m2": 117.32, "momentum": 0.1183, "fair_post": 1899.98, "fair_full": 1672.59, "misprice_pct": -32.78}, {"date": "2016-11-30", "gold": 1173.2, "rr": 1.9753, "dxy": 101.5, "cpi": 1.7, "wti": 49.44, "vix": 13.33, "gld": 298.0, "m2": 117.32, "momentum": 0.1018, "fair_post": 1973.45, "fair_full": 1791.16, "misprice_pct": -40.55}, {"date": "2016-12-30", "gold": 1147.5, "rr": 1.9714, "dxy": 102.21, "cpi": 2.1, "wti": 53.72, "vix": 14.04, "gld": 277.3, "m2": 117.32, "momentum": 0.0814, "fair_post": 1850.09, "fair_full": 1749.24, "misprice_pct": -37.98}, {"date": "2017-01-31", "gold": 1210.72, "rr": 2.0594, "dxy": 99.512, "cpi": 2.5, "wti": 52.81, "vix": 11.99, "gld": 269.6, "m2": 117.32, "momentum": 0.0827, "fair_post": 2102.53, "fair_full": 1617.31, "misprice_pct": -42.42}, {"date": "2017-02-28", "gold": 1248.44, "rr": 2.0122, "dxy": 101.12, "cpi": 2.7, "wti": 54.01, "vix": 12.92, "gld": 283.9, "m2": 117.32, "momentum": 0.0079, "fair_post": 1722.31, "fair_full": 1549.97, "misprice_pct": -27.51}, {"date": "2017-03-31", "gold": 1249.2, "rr": 1.9848, "dxy": 100.35, "cpi": 2.4, "wti": 50.6, "vix": 12.37, "gld": 281.0, "m2": 117.32, "momentum": 0.0133, "fair_post": 1760.67, "fair_full": 1506.32, "misprice_pct": -29.05}, {"date": "2017-04-28", "gold": 1268.28, "rr": 1.9209, "dxy": 99.05, "cpi": 2.2, "wti": 49.33, "vix": 10.82, "gld": 288.2, "m2": 117.32, "momentum": -0.0195, "fair_post": 1625.97, "fair_full": 1382.43, "misprice_pct": -22.0}, {"date": "2017-05-31", "gold": 1268.92, "rr": 1.8362, "dxy": 96.922, "cpi": 1.9, "wti": 48.32, "vix": 10.41, "gld": 286.3, "m2": 117.32, "momentum": 0.0441, "fair_post": 1842.3, "fair_full": 1396.98, "misprice_pct": -31.12}, {"date": "2017-06-30", "gold": 1241.61, "rr": 1.7369, "dxy": 95.628, "cpi": 1.6, "wti": 46.04, "vix": 11.18, "gld": 288.1, "m2": 117.32, "momentum": -0.0607, "fair_post": 1368.9, "fair_full": 1142.19, "misprice_pct": -9.3}, {"date": "2017-07-31", "gold": 1269.44, "rr": 1.8187, "dxy": 92.863, "cpi": 1.7, "wti": 50.17, "vix": 10.26, "gld": 267.7, "m2": 117.32, "momentum": -0.0606, "fair_post": 1475.63, "fair_full": 1062.5, "misprice_pct": -13.97}, {"date": "2017-08-31", "gold": 1321.43, "rr": 1.7731, "dxy": 92.668, "cpi": 1.9, "wti": 47.23, "vix": 10.59, "gld": 276.1, "m2": 117.32, "momentum": 0.0095, "fair_post": 1789.13, "fair_full": 1135.74, "misprice_pct": -26.14}, {"date": "2017-09-29", "gold": 1279.75, "rr": 1.8543, "dxy": 93.076, "cpi": 2.2, "wti": 51.67, "vix": 9.51, "gld": 292.5, "m2": 117.32, "momentum": -0.0274, "fair_post": 1686.39, "fair_full": 1152.97, "misprice_pct": -24.11}, {"date": "2017-10-31", "gold": 1271.45, "rr": 1.8847, "dxy": 94.552, "cpi": 2.0, "wti": 54.38, "vix": 10.18, "gld": 287.9, "m2": 117.32, "momentum": -0.0045, "fair_post": 1679.63, "fair_full": 1296.86, "misprice_pct": -24.3}, {"date": "2017-11-30", "gold": 1275.01, "rr": 1.8827, "dxy": 93.047, "cpi": 2.2, "wti": 57.4, "vix": 11.28, "gld": 284.2, "m2": 117.32, "momentum": 0.0868, "fair_post": 2044.82, "fair_full": 1419.42, "misprice_pct": -37.65}, {"date": "2017-12-29", "gold": 1302.8, "rr": 1.9834, "dxy": 92.124, "cpi": 2.1, "wti": 60.42, "vix": 11.04, "gld": 283.6, "m2": 117.32, "momentum": 0.1353, "fair_post": 2285.8, "fair_full": 1548.01, "misprice_pct": -43.0}, {"date": "2018-01-31", "gold": 1345.14, "rr": 2.1121, "dxy": 89.133, "cpi": 2.1, "wti": 64.73, "vix": 13.54, "gld": 285.0, "m2": 117.32, "momentum": 0.111, "fair_post": 2283.48, "fair_full": 1520.32, "misprice_pct": -41.09}, {"date": "2018-02-28", "gold": 1318.31, "rr": 2.1191, "dxy": 90.613, "cpi": 2.2, "wti": 61.64, "vix": 19.85, "gld": 281.6, "m2": 117.32, "momentum": 0.056, "fair_post": 2018.28, "fair_full": 1492.0, "misprice_pct": -34.68}, {"date": "2018-03-30", "gold": 1325.48, "rr": 2.0559, "dxy": 89.974, "cpi": 2.4, "wti": 64.94, "vix": 19.97, "gld": 286.8, "m2": 117.32, "momentum": 0.0611, "fair_post": 1977.4, "fair_full": 1476.83, "misprice_pct": -32.97}, {"date": "2018-04-30", "gold": 1315.39, "rr": 2.1753, "dxy": 91.841, "cpi": 2.5, "wti": 68.57, "vix": 15.93, "gld": 295.4, "m2": 117.32, "momentum": 0.0371, "fair_post": 1936.89, "fair_full": 1550.49, "misprice_pct": -32.09}, {"date": "2018-05-31", "gold": 1298.51, "rr": 2.0894, "dxy": 93.979, "cpi": 2.8, "wti": 67.04, "vix": 15.43, "gld": 287.3, "m2": 117.32, "momentum": 0.0233, "fair_post": 1823.81, "fair_full": 1503.89, "misprice_pct": -28.8}, {"date": "2018-06-29", "gold": 1252.6, "rr": 2.1285, "dxy": 94.47, "cpi": 2.9, "wti": 74.15, "vix": 16.09, "gld": 277.9, "m2": 117.32, "momentum": 0.0089, "fair_post": 1678.6, "fair_full": 1556.09, "misprice_pct": -25.38}, {"date": "2018-07-31", "gold": 1224.15, "rr": 2.1272, "dxy": 94.554, "cpi": 2.9, "wti": 68.76, "vix": 12.83, "gld": 271.6, "m2": 117.32, "momentum": -0.0357, "fair_post": 1626.96, "fair_full": 1387.47, "misprice_pct": -24.76}, {"date": "2018-08-31", "gold": 1201.15, "rr": 2.0903, "dxy": 95.14, "cpi": 2.7, "wti": 69.8, "vix": 12.86, "gld": 256.4, "m2": 117.32, "momentum": -0.091, "fair_post": 1317.04, "fair_full": 1293.15, "misprice_pct": -8.8}, {"date": "2018-09-28", "gold": 1190.88, "rr": 2.1449, "dxy": 95.132, "cpi": 2.3, "wti": 73.25, "vix": 12.12, "gld": 252.1, "m2": 117.32, "momentum": -0.0694, "fair_post": 1344.33, "fair_full": 1405.39, "misprice_pct": -11.41}, {"date": "2018-10-31", "gold": 1214.76, "rr": 2.062, "dxy": 97.127, "cpi": 2.5, "wti": 65.31, "vix": 21.23, "gld": 256.2, "m2": 117.32, "momentum": -0.0446, "fair_post": 1359.21, "fair_full": 1486.46, "misprice_pct": -10.63}, {"date": "2018-11-30", "gold": 1220.52, "rr": 1.9687, "dxy": 97.272, "cpi": 2.2, "wti": 50.93, "vix": 18.07, "gld": 258.9, "m2": 117.32, "momentum": -0.0427, "fair_post": 1510.62, "fair_full": 1326.59, "misprice_pct": -19.2}, {"date": "2018-12-31", "gold": 1282.49, "rr": 1.7139, "dxy": 96.173, "cpi": 1.9, "wti": 45.41, "vix": 25.42, "gld": 267.8, "m2": 117.32, "momentum": -0.0156, "fair_post": 1388.62, "fair_full": 1293.85, "misprice_pct": -7.64}, {"date": "2019-01-31", "gold": 1321.25, "rr": 1.863, "dxy": 95.578, "cpi": 1.6, "wti": 53.79, "vix": 16.57, "gld": 280.2, "m2": 117.32, "momentum": -0.0178, "fair_post": 1453.82, "fair_full": 1374.71, "misprice_pct": -9.12}, {"date": "2019-02-28", "gold": 1313.32, "rr": 1.9442, "dxy": 96.157, "cpi": 1.5, "wti": 57.22, "vix": 14.78, "gld": 266.8, "m2": 117.32, "momentum": -0.0038, "fair_post": 1513.31, "fair_full": 1450.85, "misprice_pct": -13.22}, {"date": "2019-03-29", "gold": 1292.38, "rr": 1.8749, "dxy": 97.284, "cpi": 1.9, "wti": 60.14, "vix": 13.71, "gld": 266.9, "m2": 117.32, "momentum": -0.025, "fair_post": 1363.75, "fair_full": 1405.42, "misprice_pct": -5.23}, {"date": "2019-04-30", "gold": 1283.53, "rr": 1.9497, "dxy": 97.479, "cpi": 2.0, "wti": 63.91, "vix": 13.12, "gld": 254.2, "m2": 117.32, "momentum": -0.0242, "fair_post": 1385.41, "fair_full": 1440.36, "misprice_pct": -7.35}, {"date": "2019-05-31", "gold": 1305.58, "rr": 1.742, "dxy": 97.75, "cpi": 1.8, "wti": 53.5, "vix": 18.71, "gld": 253.1, "m2": 117.32, "momentum": 0.0054, "fair_post": 1388.51, "fair_full": 1389.33, "misprice_pct": -5.97}, {"date": "2019-06-28", "gold": 1409.55, "rr": 1.7003, "dxy": 96.13, "cpi": 1.6, "wti": 58.47, "vix": 15.08, "gld": 270.5, "m2": 117.32, "momentum": 0.1253, "fair_post": 1805.28, "fair_full": 1591.35, "misprice_pct": -21.92}, {"date": "2019-07-31", "gold": 1413.78, "rr": 1.7497, "dxy": 98.516, "cpi": 1.8, "wti": 58.58, "vix": 16.12, "gld": 280.6, "m2": 117.32, "momentum": 0.1549, "fair_post": 1909.44, "fair_full": 1758.41, "misprice_pct": -25.96}, {"date": "2019-08-30", "gold": 1520.38, "rr": 1.5417, "dxy": 98.916, "cpi": 1.7, "wti": 55.1, "vix": 18.98, "gld": 299.4, "m2": 117.32, "momentum": 0.2658, "fair_post": 2163.94, "fair_full": 1922.84, "misprice_pct": -29.74}, {"date": "2019-09-30", "gold": 1472.49, "rr": 1.5204, "dxy": 99.377, "cpi": 1.7, "wti": 54.07, "vix": 16.24, "gld": 314.0, "m2": 117.32, "momentum": 0.2365, "fair_post": 2068.45, "fair_full": 1870.67, "misprice_pct": -28.81}, {"date": "2019-10-31", "gold": 1512.99, "rr": 1.5501, "dxy": 97.352, "cpi": 1.8, "wti": 54.18, "vix": 13.22, "gld": 312.3, "m2": 117.32, "momentum": 0.2455, "fair_post": 2235.64, "fair_full": 1789.82, "misprice_pct": -32.32}, {"date": "2019-11-29", "gold": 1463.98, "rr": 1.633, "dxy": 98.273, "cpi": 2.1, "wti": 55.17, "vix": 12.62, "gld": 305.6, "m2": 117.32, "momentum": 0.1995, "fair_post": 2133.6, "fair_full": 1738.24, "misprice_pct": -31.38}, {"date": "2019-12-31", "gold": 1517.27, "rr": 1.786, "dxy": 96.389, "cpi": 2.3, "wti": 61.06, "vix": 13.78, "gld": 304.9, "m2": 117.32, "momentum": 0.1831, "fair_post": 2171.18, "fair_full": 1752.96, "misprice_pct": -30.12}, {"date": "2020-01-31", "gold": 1589.16, "rr": 1.6408, "dxy": 97.39, "cpi": 2.5, "wti": 51.56, "vix": 18.84, "gld": 308.4, "m2": 117.32, "momentum": 0.2028, "fair_post": 2216.64, "fair_full": 1711.94, "misprice_pct": -28.31}, {"date": "2020-02-28", "gold": 1585.69, "rr": 1.4301, "dxy": 98.132, "cpi": 2.3, "wti": 44.76, "vix": 40.11, "gld": 319.1, "m2": 117.32, "momentum": 0.2074, "fair_post": 1855.06, "fair_full": 1833.75, "misprice_pct": -14.52}, {"date": "2020-03-31", "gold": 1577.18, "rr": 0.9269, "dxy": 99.048, "cpi": 1.5, "wti": 20.48, "vix": 53.54, "gld": 330.4, "m2": 117.32, "momentum": 0.2204, "fair_post": 1566.36, "fair_full": 1676.88, "misprice_pct": 0.69}, {"date": "2020-04-30", "gold": 1686.5, "rr": 1.0694, "dxy": 99.016, "cpi": 0.3, "wti": 18.84, "vix": 34.15, "gld": 361.1, "m2": 117.32, "momentum": 0.314, "fair_post": 2146.95, "fair_full": 1867.71, "misprice_pct": -21.45}, {"date": "2020-05-29", "gold": 1730.27, "rr": 1.1432, "dxy": 98.344, "cpi": 0.1, "wti": 35.49, "vix": 27.51, "gld": 384.0, "m2": 117.32, "momentum": 0.3253, "fair_post": 2058.38, "fair_full": 2046.73, "misprice_pct": -15.94}, {"date": "2020-06-30", "gold": 1780.96, "rr": 1.3387, "dxy": 97.391, "cpi": 0.6, "wti": 39.27, "vix": 30.43, "gld": 403.2, "m2": 117.32, "momentum": 0.2635, "fair_post": 1982.67, "fair_full": 2038.81, "misprice_pct": -10.17}, {"date": "2020-07-31", "gold": 1975.86, "rr": 1.5545, "dxy": 93.349, "cpi": 1.0, "wti": 40.27, "vix": 24.46, "gld": 424.9, "m2": 117.32, "momentum": 0.3976, "fair_post": 2918.46, "fair_full": 2184.98, "misprice_pct": -32.3}, {"date": "2020-08-31", "gold": 1967.8, "rr": 1.8049, "dxy": 92.144, "cpi": 1.3, "wti": 42.61, "vix": 26.41, "gld": 428.3, "m2": 117.32, "momentum": 0.2943, "fair_post": 2739.86, "fair_full": 2082.68, "misprice_pct": -28.18}, {"date": "2020-09-30", "gold": 1885.82, "rr": 1.6327, "dxy": 93.886, "cpi": 1.4, "wti": 40.22, "vix": 26.37, "gld": 434.4, "m2": 117.32, "momentum": 0.2807, "fair_post": 2545.66, "fair_full": 2028.45, "misprice_pct": -25.92}, {"date": "2020-10-30", "gold": 1878.81, "rr": 1.7078, "dxy": 94.038, "cpi": 1.2, "wti": 35.79, "vix": 38.02, "gld": 430.7, "m2": 117.32, "momentum": 0.2418, "fair_post": 2351.13, "fair_full": 2074.36, "misprice_pct": -20.09}, {"date": "2020-11-30", "gold": 1776.95, "rr": 1.7899, "dxy": 91.869, "cpi": 1.2, "wti": 45.34, "vix": 20.57, "gld": 409.3, "m2": 117.32, "momentum": 0.2138, "fair_post": 2433.43, "fair_full": 1867.63, "misprice_pct": -26.98}, {"date": "2020-12-31", "gold": 1898.36, "rr": 1.9868, "dxy": 89.937, "cpi": 1.4, "wti": 48.52, "vix": 22.75, "gld": 401.2, "m2": 117.32, "momentum": 0.2512, "fair_post": 2750.96, "fair_full": 1964.63, "misprice_pct": -30.99}, {"date": "2021-01-29", "gold": 1847.65, "rr": 2.1019, "dxy": 90.584, "cpi": 1.4, "wti": 52.2, "vix": 33.09, "gld": 397.7, "m2": 117.32, "momentum": 0.1627, "fair_post": 2296.49, "fair_full": 2001.02, "misprice_pct": -19.54}, {"date": "2021-02-26", "gold": 1734.04, "rr": 2.1489, "dxy": 90.879, "cpi": 1.7, "wti": 61.5, "vix": 27.95, "gld": 375.0, "m2": 117.32, "momentum": 0.0936, "fair_post": 2014.08, "fair_full": 1875.76, "misprice_pct": -13.9}, {"date": "2021-03-31", "gold": 1707.71, "rr": 2.3741, "dxy": 93.232, "cpi": 2.6, "wti": 59.16, "vix": 19.4, "gld": 355.9, "m2": 117.32, "momentum": 0.0828, "fair_post": 2366.33, "fair_full": 1812.75, "misprice_pct": -27.83}, {"date": "2021-04-30", "gold": 1769.13, "rr": 2.4063, "dxy": 91.28, "cpi": 4.2, "wti": 63.58, "vix": 18.61, "gld": 349.0, "m2": 117.32, "momentum": 0.049, "fair_post": 2484.1, "fair_full": 1577.87, "misprice_pct": -28.78}, {"date": "2021-05-31", "gold": 1906.87, "rr": 2.4482, "dxy": 89.829, "cpi": 5.0, "wti": 66.32, "vix": 16.76, "gld": 358.1, "m2": 117.32, "momentum": 0.1021, "fair_post": 2861.74, "fair_full": 1593.77, "misprice_pct": -33.37}, {"date": "2021-06-30", "gold": 1770.11, "rr": 2.3365, "dxy": 92.436, "cpi": 5.4, "wti": 73.47, "vix": 15.83, "gld": 359.1, "m2": 117.32, "momentum": -0.0061, "fair_post": 2224.32, "fair_full": 1469.59, "misprice_pct": -20.42}, {"date": "2021-07-30", "gold": 1814.19, "rr": 2.4003, "dxy": 92.174, "cpi": 5.4, "wti": 73.95, "vix": 18.24, "gld": 354.3, "m2": 117.32, "momentum": -0.0818, "fair_post": 1951.46, "fair_full": 1370.37, "misprice_pct": -7.03}, {"date": "2021-08-31", "gold": 1813.62, "rr": 2.3383, "dxy": 92.626, "cpi": 5.3, "wti": 68.5, "vix": 16.48, "gld": 343.7, "m2": 117.32, "momentum": -0.0784, "fair_post": 1994.6, "fair_full": 1288.76, "misprice_pct": -9.07}, {"date": "2021-09-30", "gold": 1756.95, "rr": 2.3762, "dxy": 94.23, "cpi": 5.4, "wti": 75.03, "vix": 23.14, "gld": 340.3, "m2": 117.32, "momentum": -0.0683, "fair_post": 1848.35, "fair_full": 1484.35, "misprice_pct": -4.94}, {"date": "2021-10-29", "gold": 1783.38, "rr": 2.587, "dxy": 94.123, "cpi": 6.2, "wti": 83.57, "vix": 16.26, "gld": 337.7, "m2": 117.32, "momentum": -0.0508, "fair_post": 2159.53, "fair_full": 1536.61, "misprice_pct": -17.42}, {"date": "2021-11-30", "gold": 1774.52, "rr": 2.5131, "dxy": 95.994, "cpi": 6.8, "wti": 66.18, "vix": 27.19, "gld": 341.5, "m2": 117.32, "momentum": -0.0014, "fair_post": 2468.27, "fair_full": 1555.08, "misprice_pct": -28.11}, {"date": "2021-12-31", "gold": 1829.2, "rr": 2.5947, "dxy": 95.67, "cpi": 7.0, "wti": 75.21, "vix": 17.22, "gld": 335.7, "m2": 117.32, "momentum": -0.0364, "fair_post": 2415.5, "fair_full": 1476.37, "misprice_pct": -24.27}, {"date": "2022-01-31", "gold": 1797.17, "rr": 2.4864, "dxy": 96.54, "cpi": 7.5, "wti": 88.15, "vix": 24.83, "gld": 350.3, "m2": 117.32, "momentum": -0.0273, "fair_post": 2105.89, "fair_full": 1651.7, "misprice_pct": -14.66}, {"date": "2022-02-28", "gold": 1908.99, "rr": 2.6218, "dxy": 96.707, "cpi": 7.9, "wti": 95.72, "vix": 30.15, "gld": 354.3, "m2": 117.32, "momentum": 0.1009, "fair_post": 2587.69, "fair_full": 2031.68, "misprice_pct": -26.23}, {"date": "2022-03-31", "gold": 1937.44, "rr": 2.8288, "dxy": 98.312, "cpi": 8.5, "wti": 100.28, "vix": 20.56, "gld": 375.9, "m2": 117.32, "momentum": 0.1345, "fair_post": 2978.92, "fair_full": 2171.49, "misprice_pct": -34.96}, {"date": "2022-04-29", "gold": 1896.93, "rr": 2.9388, "dxy": 102.959, "cpi": 8.3, "wti": 104.69, "vix": 33.4, "gld": 377.1, "m2": 117.32, "momentum": 0.0722, "fair_post": 2438.67, "fair_full": 2446.51, "misprice_pct": -22.21}, {"date": "2022-05-31", "gold": 1837.35, "rr": 2.6525, "dxy": 101.752, "cpi": 8.6, "wti": 114.67, "vix": 26.19, "gld": 368.2, "m2": 117.32, "momentum": -0.0365, "fair_post": 1777.79, "fair_full": 2076.0, "misprice_pct": 3.35}, {"date": "2022-06-30", "gold": 1807.27, "rr": 2.3449, "dxy": 104.685, "cpi": 9.1, "wti": 105.76, "vix": 28.71, "gld": 362.1, "m2": 117.32, "momentum": 0.021, "fair_post": 1844.92, "fair_full": 2038.97, "misprice_pct": -2.04}, {"date": "2022-07-29", "gold": 1765.94, "rr": 2.5526, "dxy": 105.903, "cpi": 8.5, "wti": 98.62, "vix": 21.33, "gld": 346.9, "m2": 117.32, "momentum": -0.0266, "fair_post": 1918.14, "fair_full": 1971.05, "misprice_pct": -7.93}, {"date": "2022-08-31", "gold": 1711.04, "rr": 2.4813, "dxy": 108.7, "cpi": 8.3, "wti": 89.55, "vix": 25.87, "gld": 335.8, "m2": 117.32, "momentum": -0.0566, "fair_post": 1722.54, "fair_full": 1940.68, "misprice_pct": -0.67}, {"date": "2022-09-30", "gold": 1660.61, "rr": 2.1545, "dxy": 112.117, "cpi": 8.2, "wti": 79.49, "vix": 31.62, "gld": 324.3, "m2": 117.32, "momentum": -0.0548, "fair_post": 1434.4, "fair_full": 1876.04, "misprice_pct": 15.77}, {"date": "2022-10-31", "gold": 1633.56, "rr": 2.5112, "dxy": 111.527, "cpi": 7.7, "wti": 86.53, "vix": 25.88, "gld": 317.8, "m2": 117.32, "momentum": -0.084, "fair_post": 1522.87, "fair_full": 1992.77, "misprice_pct": 7.27}, {"date": "2022-11-30", "gold": 1768.52, "rr": 2.3683, "dxy": 105.95, "cpi": 7.1, "wti": 80.55, "vix": 20.58, "gld": 313.6, "m2": 117.32, "momentum": -0.0034, "fair_post": 1951.23, "fair_full": 1825.65, "misprice_pct": -9.36}, {"date": "2022-12-30", "gold": 1824.02, "rr": 2.2972, "dxy": 103.522, "cpi": 6.5, "wti": 80.26, "vix": 21.67, "gld": 317.0, "m2": 117.32, "momentum": -0.0028, "fair_post": 1867.7, "fair_full": 1780.94, "misprice_pct": -2.34}, {"date": "2023-01-31", "gold": 1928.36, "rr": 2.2456, "dxy": 102.097, "cpi": 6.4, "wti": 78.87, "vix": 19.4, "gld": 316.9, "m2": 117.32, "momentum": 0.073, "fair_post": 2197.43, "fair_full": 1819.75, "misprice_pct": -12.24}, {"date": "2023-02-28", "gold": 1826.92, "rr": 2.3783, "dxy": 104.869, "cpi": 6.0, "wti": 77.05, "vix": 20.7, "gld": 316.4, "m2": 117.32, "momentum": -0.043, "fair_post": 1732.19, "fair_full": 1793.66, "misprice_pct": 5.47}, {"date": "2023-03-31", "gold": 1969.28, "rr": 2.3221, "dxy": 102.506, "cpi": 5.0, "wti": 75.67, "vix": 18.7, "gld": 320.9, "m2": 117.32, "momentum": 0.0164, "fair_post": 1887.95, "fair_full": 1859.95, "misprice_pct": 4.31}, {"date": "2023-04-28", "gold": 1990.0, "rr": 2.2083, "dxy": 101.659, "cpi": 4.9, "wti": 76.78, "vix": 15.78, "gld": 320.4, "m2": 117.32, "momentum": 0.0491, "fair_post": 1948.1, "fair_full": 1832.92, "misprice_pct": 2.15}, {"date": "2023-05-31", "gold": 1962.73, "rr": 2.1768, "dxy": 104.326, "cpi": 4.0, "wti": 68.09, "vix": 17.94, "gld": 325.1, "m2": 117.32, "momentum": 0.0682, "fair_post": 1904.97, "fair_full": 1974.34, "misprice_pct": 3.03}, {"date": "2023-06-30", "gold": 1919.35, "rr": 2.2329, "dxy": 102.912, "cpi": 3.0, "wti": 70.64, "vix": 13.59, "gld": 319.1, "m2": 117.32, "momentum": 0.062, "fair_post": 1837.28, "fair_full": 1997.21, "misprice_pct": 4.47}, {"date": "2023-07-31", "gold": 1965.09, "rr": 2.3734, "dxy": 101.855, "cpi": 3.2, "wti": 81.8, "vix": 13.63, "gld": 316.1, "m2": 117.32, "momentum": 0.1128, "fair_post": 2033.52, "fair_full": 2187.92, "misprice_pct": -3.37}, {"date": "2023-08-31", "gold": 1940.19, "rr": 2.2375, "dxy": 103.619, "cpi": 3.7, "wti": 83.63, "vix": 13.57, "gld": 308.3, "m2": 117.32, "momentum": 0.1339, "fair_post": 1995.02, "fair_full": 2187.74, "misprice_pct": -2.75}, {"date": "2023-09-29", "gold": 1848.63, "rr": 2.3407, "dxy": 106.174, "cpi": 3.7, "wti": 90.79, "vix": 17.52, "gld": 302.7, "m2": 117.32, "momentum": 0.1132, "fair_post": 1765.1, "fair_full": 2373.3, "misprice_pct": 4.73}, {"date": "2023-10-31", "gold": 1983.88, "rr": 2.4164, "dxy": 106.663, "cpi": 3.2, "wti": 81.02, "vix": 18.14, "gld": 297.9, "m2": 117.32, "momentum": 0.2145, "fair_post": 2289.25, "fair_full": 2551.71, "misprice_pct": -13.34}, {"date": "2023-11-30", "gold": 2036.41, "rr": 2.25, "dxy": 103.497, "cpi": 3.1, "wti": 75.96, "vix": 12.92, "gld": 303.9, "m2": 117.32, "momentum": 0.1515, "fair_post": 2123.02, "fair_full": 2187.89, "misprice_pct": -4.08}, {"date": "2023-12-29", "gold": 2062.98, "rr": 2.1732, "dxy": 101.333, "cpi": 3.4, "wti": 71.65, "vix": 12.45, "gld": 304.9, "m2": 117.32, "momentum": 0.131, "fair_post": 2157.11, "fair_full": 1977.11, "misprice_pct": -4.36}, {"date": "2024-01-31", "gold": 2039.52, "rr": 2.2459, "dxy": 103.274, "cpi": 3.1, "wti": 75.85, "vix": 14.35, "gld": 295.3, "m2": 117.32, "momentum": 0.0576, "fair_post": 1742.17, "fair_full": 2008.17, "misprice_pct": 17.07}, {"date": "2024-02-29", "gold": 2044.3, "rr": 2.3232, "dxy": 104.156, "cpi": 3.2, "wti": 78.26, "vix": 13.4, "gld": 285.6, "m2": 117.32, "momentum": 0.119, "fair_post": 2010.17, "fair_full": 2165.01, "misprice_pct": 1.7}, {"date": "2024-03-29", "gold": 2229.87, "rr": 2.3246, "dxy": 104.487, "cpi": 3.5, "wti": 83.17, "vix": 13.01, "gld": 288.2, "m2": 117.32, "momentum": 0.1323, "fair_post": 2023.12, "fair_full": 2220.47, "misprice_pct": 10.22}, {"date": "2024-04-30", "gold": 2286.25, "rr": 2.4044, "dxy": 106.221, "cpi": 3.4, "wti": 81.93, "vix": 15.65, "gld": 289.0, "m2": 117.32, "momentum": 0.1489, "fair_post": 2079.35, "fair_full": 2365.87, "misprice_pct": 9.95}, {"date": "2024-05-31", "gold": 2327.33, "rr": 2.356, "dxy": 104.671, "cpi": 3.3, "wti": 76.99, "vix": 12.92, "gld": 289.1, "m2": 117.32, "momentum": 0.1858, "fair_post": 2325.49, "fair_full": 2296.22, "misprice_pct": 0.08}, {"date": "2024-06-28", "gold": 2326.75, "rr": 2.292, "dxy": 105.866, "cpi": 3.0, "wti": 81.54, "vix": 12.44, "gld": 288.1, "m2": 117.32, "momentum": 0.2123, "fair_post": 2231.71, "fair_full": 2419.97, "misprice_pct": 4.26}, {"date": "2024-07-31", "gold": 2447.6, "rr": 2.2302, "dxy": 104.096, "cpi": 2.9, "wti": 77.91, "vix": 16.36, "gld": 294.1, "m2": 117.32, "momentum": 0.2455, "fair_post": 2355.44, "fair_full": 2416.11, "misprice_pct": 3.91}, {"date": "2024-08-30", "gold": 2503.39, "rr": 2.152, "dxy": 101.698, "cpi": 2.5, "wti": 73.55, "vix": 15.0, "gld": 300.0, "m2": 117.32, "momentum": 0.2903, "fair_post": 2562.31, "fair_full": 2374.68, "misprice_pct": -2.3}, {"date": "2024-09-30", "gold": 2634.58, "rr": 2.1873, "dxy": 100.779, "cpi": 2.4, "wti": 68.17, "vix": 16.73, "gld": 303.3, "m2": 117.32, "momentum": 0.4252, "fair_post": 3197.11, "fair_full": 2578.44, "misprice_pct": -17.59}, {"date": "2024-10-31", "gold": 2743.97, "rr": 2.3275, "dxy": 103.976, "cpi": 2.6, "wti": 69.26, "vix": 23.16, "gld": 310.3, "m2": 117.32, "momentum": 0.3831, "fair_post": 2991.78, "fair_full": 2737.03, "misprice_pct": -8.28}, {"date": "2024-11-29", "gold": 2643.15, "rr": 2.2679, "dxy": 105.737, "cpi": 2.7, "wti": 68.0, "vix": 13.51, "gld": 305.8, "m2": 117.32, "momentum": 0.2979, "fair_post": 2711.42, "fair_full": 2503.07, "misprice_pct": -2.52}, {"date": "2024-12-31", "gold": 2624.5, "rr": 2.3388, "dxy": 108.487, "cpi": 2.9, "wti": 71.72, "vix": 17.35, "gld": 303.8, "m2": 117.32, "momentum": 0.2722, "fair_post": 2514.39, "fair_full": 2629.82, "misprice_pct": 4.38}, {"date": "2025-01-31", "gold": 2798.41, "rr": 2.4302, "dxy": 108.37, "cpi": 3.0, "wti": 72.53, "vix": 16.43, "gld": 301.2, "m2": 117.32, "momentum": 0.3721, "fair_post": 2998.59, "fair_full": 2825.36, "misprice_pct": -6.68}, {"date": "2025-02-28", "gold": 2857.83, "rr": 2.3677, "dxy": 107.614, "cpi": 2.8, "wti": 69.76, "vix": 19.63, "gld": 315.1, "m2": 117.32, "momentum": 0.398, "fair_post": 3045.24, "fair_full": 2868.15, "misprice_pct": -6.15}, {"date": "2025-03-31", "gold": 3123.57, "rr": 2.3703, "dxy": 104.21, "cpi": 2.4, "wti": 71.48, "vix": 22.28, "gld": 325.3, "m2": 117.32, "momentum": 0.4008, "fair_post": 3037.1, "fair_full": 2852.23, "misprice_pct": 2.85}, {"date": "2025-04-30", "gold": 3288.71, "rr": 2.2396, "dxy": 99.468, "cpi": 2.3, "wti": 58.21, "vix": 24.7, "gld": 329.2, "m2": 117.32, "momentum": 0.4385, "fair_post": 3377.54, "fair_full": 2619.32, "misprice_pct": -2.63}, {"date": "2025-05-30", "gold": 3289.25, "rr": 2.3297, "dxy": 99.329, "cpi": 2.4, "wti": 60.79, "vix": 18.57, "gld": 324.4, "m2": 117.32, "momentum": 0.4133, "fair_post": 3406.92, "fair_full": 2555.21, "misprice_pct": -3.45}, {"date": "2025-06-30", "gold": 3303.14, "rr": 2.2839, "dxy": 96.875, "cpi": 2.7, "wti": 65.11, "vix": 16.73, "gld": 332.3, "m2": 117.32, "momentum": 0.4196, "fair_post": 3458.75, "fair_full": 2474.18, "misprice_pct": -4.5}, {"date": "2025-07-31", "gold": 3289.93, "rr": 2.3933, "dxy": 99.968, "cpi": 2.7, "wti": 69.26, "vix": 16.72, "gld": 333.1, "m2": 117.32, "momentum": 0.3441, "fair_post": 3101.17, "fair_full": 2531.14, "misprice_pct": 6.09}, {"date": "2025-08-29", "gold": 3447.95, "rr": 2.4122, "dxy": 97.771, "cpi": 2.9, "wti": 64.01, "vix": 15.36, "gld": 341.3, "m2": 117.32, "momentum": 0.3773, "fair_post": 3438.77, "fair_full": 2459.1, "misprice_pct": 0.27}, {"date": "2025-09-30", "gold": 3858.96, "rr": 2.3707, "dxy": 97.775, "cpi": 3.0, "wti": 62.37, "vix": 16.28, "gld": 353.7, "m2": 117.32, "momentum": 0.4647, "fair_post": 3775.44, "fair_full": 2605.39, "misprice_pct": 2.21}, {"date": "2025-10-31", "gold": 4002.92, "rr": 2.3162, "dxy": 99.804, "cpi": 3.0, "wti": 60.98, "vix": 17.44, "gld": 363.0, "m2": 117.32, "momentum": 0.4588, "fair_post": 3657.17, "fair_full": 2658.18, "misprice_pct": 9.45}, {"date": "2025-11-28", "gold": 4239.43, "rr": 2.2349, "dxy": 99.459, "cpi": 2.7, "wti": 58.55, "vix": 16.35, "gld": 365.3, "m2": 117.32, "momentum": 0.6039, "fair_post": 4176.41, "fair_full": 2868.49, "misprice_pct": 1.51}, {"date": "2025-12-31", "gold": 4319.37, "rr": 2.2458, "dxy": 98.322, "cpi": 2.7, "wti": 57.42, "vix": 14.95, "gld": 374.2, "m2": 117.32, "momentum": 0.6458, "fair_post": 4417.2, "fair_full": 2901.5, "misprice_pct": -2.21}, {"date": "2026-01-30", "gold": 4894.23, "rr": 2.3413, "dxy": 96.991, "cpi": 2.4, "wti": 65.21, "vix": 17.44, "gld": 380.1, "m2": 117.32, "momentum": 0.7489, "fair_post": 4740.51, "fair_full": 3209.99, "misprice_pct": 3.24}, {"date": "2026-02-27", "gold": 5278.93, "rr": 2.2569, "dxy": 97.608, "cpi": 2.4, "wti": 67.02, "vix": 19.86, "gld": 385.2, "m2": 117.32, "momentum": 0.8472, "fair_post": 4978.38, "fair_full": 3419.82, "misprice_pct": 6.04}];
+const LAST_DATE = '2026-02-27';
+
+const BETAS = {
+  post: {
+    b: [3494.5344, 841.089, -28.2545, 143.1867, -16.0357, -12.3092, 3917.5887, 0, 0],
+    keys: ['rr','dxy','cpi','wti','vix','momentum','gld'],
+    r2: 0.9617, label:'Post-2022 · R² 96%'
+  },
+  full: {
+    b: [-7861.7899, 409.4284, 34.414, -88.1899, 9.1839, 9.3509, 1772.2865, 1.8974, 35.5998],
+    keys: ['rr','dxy','cpi','wti','vix','momentum','gld','m2'],
+    r2: 0.7045, label:'Full 8F · R² 70%'
+  }
+};
+
+const FACTOR_META = [
+  {key:'rr',       name:'Real Rate (TIPS)',  ticker:'USGGBE10', color:'#1A4A7A', unit:'%',    fmt:2},
+  {key:'dxy',      name:'DXY Dollar Index',  ticker:'DXY',      color:'#1A6B3A', unit:'',     fmt:1},
+  {key:'cpi',      name:'CPI YoY (US)',      ticker:'CPI YOY',  color:'#8B2020', unit:'%',    fmt:1},
+  {key:'wti',      name:'WTI Crude Oil',     ticker:'CL1',      color:'#7A3A10', unit:'$/bbl',fmt:0},
+  {key:'vix',      name:'VIX Index',         ticker:'VIX',      color:'#5A2A7A', unit:'',     fmt:1},
+  {key:'momentum', name:'Momentum (12M)',    ticker:'XAU calc', color:'#C48A2A', unit:'×',    fmt:2},
+  {key:'gld',      name:'GLD ETF Shares',    ticker:'GLD SHO',  color:'#2A7A5A', unit:'M',    fmt:0},
+  {key:'m2',       name:'World M2 % GDP',    ticker:'M2MGWWLD', color:'#2A4A8A', unit:'%',    fmt:1},
+];
+
+// Momentum percentile lookup
+const MOM_SORTED = [-0.2828, -0.2692, -0.2519, -0.2501, -0.2311, -0.2272, -0.1962, -0.1793, -0.1753, -0.1603, -0.1456, -0.129, -0.1254, -0.1184, -0.1168, -0.1135, -0.113, -0.1107, -0.1041, -0.0995, -0.0916, -0.091, -0.091, -0.0879, -0.0854, -0.084, -0.083, -0.0818, -0.0784, -0.0782, -0.0774, -0.077, -0.0732, -0.0694, -0.069, -0.0686, -0.0683, -0.0607, -0.0606, -0.0566, -0.0548, -0.0508, -0.0473, -0.0446, -0.043, -0.0427, -0.0426, -0.0424, -0.0365, -0.0364, -0.0357, -0.0324, -0.0321, -0.0274, -0.0273, -0.0266, -0.0263, -0.025, -0.0242, -0.0195, -0.018, -0.0178, -0.0156, -0.0144, -0.0077, -0.0061, -0.0045, -0.0038, -0.0034, -0.0028, -0.0014, 0.0012, 0.0019, 0.0027, 0.0035, 0.0054, 0.0079, 0.0089, 0.0095, 0.0121, 0.0133, 0.0161, 0.0164, 0.0208, 0.021, 0.021, 0.0233, 0.0237, 0.0315, 0.0367, 0.0371, 0.0416, 0.0433, 0.0436, 0.044, 0.0441, 0.049, 0.0491, 0.0549, 0.056, 0.0576, 0.058, 0.0611, 0.062, 0.0646, 0.0648, 0.0682, 0.0706, 0.0722, 0.073, 0.0733, 0.0752, 0.0814, 0.0827, 0.0828, 0.0868, 0.0914, 0.0922, 0.0936, 0.1009, 0.101, 0.1018, 0.1021, 0.1045, 0.111, 0.1128, 0.1132, 0.1183, 0.119, 0.1253, 0.1276, 0.131, 0.1323, 0.1339, 0.1345, 0.1353, 0.1373, 0.1444, 0.1482, 0.1489, 0.1515, 0.1533, 0.1549, 0.157, 0.1627, 0.1647, 0.1653, 0.1713, 0.1751, 0.1801, 0.1831, 0.1858, 0.186, 0.192, 0.1995, 0.2022, 0.2028, 0.2074, 0.2075, 0.2092, 0.2109, 0.2123, 0.2138, 0.2145, 0.2204, 0.2315, 0.2326, 0.2331, 0.2344, 0.2365, 0.2379, 0.2409, 0.2418, 0.2422, 0.2429, 0.2437, 0.2455, 0.2455, 0.2512, 0.2598, 0.2614, 0.2626, 0.2628, 0.2635, 0.2658, 0.2722, 0.2749, 0.2807, 0.2865, 0.289, 0.2903, 0.2935, 0.2943, 0.2957, 0.2979, 0.2985, 0.3003, 0.304, 0.304, 0.3094, 0.3114, 0.3136, 0.314, 0.3142, 0.3253, 0.3263, 0.3274, 0.3409, 0.3422, 0.3441, 0.3462, 0.3626, 0.3721, 0.376, 0.3773, 0.3777, 0.3813, 0.3831, 0.3976, 0.398, 0.4008, 0.4133, 0.4141, 0.4178, 0.4196, 0.4245, 0.4252, 0.4385, 0.4414, 0.442, 0.4443, 0.455, 0.4588, 0.4635, 0.4647, 0.4815, 0.5065, 0.5463, 0.6039, 0.6458, 0.7489, 0.8472];
+function momPercentile(val) {
+  const below = MOM_SORTED.filter(v => v <= val).length;
+  return Math.round(below / MOM_SORTED.length * 100);
+}
+
+const DEFAULTS = {
+  rr: 2.26, dxy: 97.6, cpi: 2.4,
+  wti: 67.0, vix: 19.9,
+  momentum: 0.85, gld: 385.0, m2: 117.3
+};
+
+let currentModel = 'post';
+let periodSlice = 0;
+let chartInst = null;
+let isScenario = false;
+
+// Thumb colors
+const tc = document.createElement('style');
+tc.textContent = `#sl-rr::-webkit-slider-thumb{background:#1A4A7A}#sl-dxy::-webkit-slider-thumb{background:#1A6B3A}#sl-cpi::-webkit-slider-thumb{background:#8B2020}#sl-wti::-webkit-slider-thumb{background:#7A3A10}#sl-vix::-webkit-slider-thumb{background:#5A2A7A}#sl-momentum::-webkit-slider-thumb{background:#C48A2A}#sl-gld::-webkit-slider-thumb{background:#2A7A5A}#sl-m2::-webkit-slider-thumb{background:#2A4A8A}`;
+document.head.appendChild(tc);
+
+['rr','dxy','cpi','wti','vix','momentum','gld','m2'].forEach(k => {
+  document.getElementById('sl-'+k).addEventListener('input', () => { isScenario=true; recalc(); });
+});
+document.getElementById('actual-input').addEventListener('input', recalc);
+
+function getVals() {
+  return Object.fromEntries(['rr','dxy','cpi','wti','vix','momentum','gld','m2'].map(k => [k, parseFloat(document.getElementById('sl-'+k).value)]));
+}
+function getActual() {
+  const v = parseFloat(document.getElementById('actual-input').value);
+  return isNaN(v) ? 5278.93 : v;
+}
+
+function fairPrice(vals, model) {
+  const {b, keys} = BETAS[model];
+  return b[0] + keys.reduce((s,k,i) => s + b[i+1]*(vals[k]||0), 0);
+}
+
+function selectModel(m, el) {
+  currentModel = m;
+  document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('fr-m2').style.opacity = m==='full'?'1':'0.45';
+  document.getElementById('top-r2').textContent = BETAS[m].label;
+  recalc();
+}
+
+function resetAll() {
+  Object.entries(DEFAULTS).forEach(([k,v]) => { document.getElementById('sl-'+k).value = v; });
+  document.getElementById('actual-input').value = '5278.93';
+  isScenario = false;
+  recalc();
+  notify('Reset เป็นค่า Feb 2026 แล้ว');
+}
+
+function recalc() {
+  const vals = getVals();
+  const actual = getActual();
+  const bm = BETAS[currentModel];
+  const fair = fairPrice(vals, currentModel);
+  const gap = actual - fair;
+  const gapPct = (gap/fair*100);
+
+  // Slider labels + change badges
+  FACTOR_META.forEach(f => {
+    const v = vals[f.key];
+    const el_val = document.getElementById('fv-'+f.key);
+    const el_chg = document.getElementById('fc-'+f.key);
+    if (el_val) el_val.textContent = v.toFixed(f.fmt);
+    if (el_chg) {
+      const diff = v - DEFAULTS[f.key];
+      if (Math.abs(diff) < Math.pow(10,-f.fmt)*0.6) {
+        el_chg.textContent=''; el_chg.className='fr-chg chg-flat';
+      } else {
+        const sign = diff>0?'+':'';
+        el_chg.textContent = sign+diff.toFixed(f.fmt);
+        el_chg.className = 'fr-chg '+(diff>0?'chg-up':'chg-dn');
+      }
+    }
+  });
+
+  // Hero
+  document.getElementById('hero-price').textContent = '$'+Math.round(fair).toLocaleString('en');
+  document.getElementById('hero-actual').textContent = '$'+actual.toLocaleString('en',{maximumFractionDigits:0});
+  document.getElementById('hero-lbl').textContent = `Scenario Fair Value — ${bm.label}`;
+  document.getElementById('m-fair').textContent = '$'+Math.round(fair).toLocaleString('en');
+  document.getElementById('m-fair-sub').textContent = bm.label;
+  document.getElementById('sens-model-lbl').textContent = currentModel==='post'?'Post-2022 β':'Full 8F β';
+
+  const gEl = document.getElementById('hero-gap');
+  gEl.textContent = (gap>=0?'Overvalued +':'Undervalued ')+(gap>=0?'+':'')+Math.round(gap).toLocaleString('en')+' ('+gapPct.toFixed(1)+'%)';
+  gEl.className = 'hero-gap '+(gap>0?'gap-over':gap<0?'gap-under':'gap-fair');
+
+  document.getElementById('m-misprice').textContent = (gap>=0?'+':'')+Math.round(gap).toLocaleString('en');
+  document.getElementById('m-misprice').className = 'mc-val '+(gap>0?'c-red':'c-green');  // fixed class
+  document.getElementById('m-misprice-sub').textContent = (gap>=0?'Overvalued +':'Undervalued ')+Math.abs(gapPct).toFixed(1)+'%';
+
+  // Hero class
+  const hero = document.getElementById('hero');
+  hero.className = 'hero '+(gapPct>10?'hero-bear':gapPct<-10?'hero-bull':'hero-fair');
+
+  // Verdict
+  const vbox=document.getElementById('verdict'), vicon=document.getElementById('v-icon');
+  const vtxt=document.getElementById('v-text'), vsub=document.getElementById('v-sub');
+  if (gapPct > 20) {
+    vbox.className='verdict v-over'; vicon.textContent='⚠️';
+    vtxt.textContent=`Overvalued มาก +${gapPct.toFixed(1)}% — Momentum Overshoot สูงมาก`;
+    vsub.textContent='KS: ไม่แนะนำ Add position · รอ Pullback หรือ Catalyst Fundamental ใหม่';
+  } else if (gapPct > 8) {
+    vbox.className='verdict v-warn'; vicon.textContent='🔸';
+    vtxt.textContent=`Overvalued เล็กน้อย +${gapPct.toFixed(1)}% — Momentum ยังหนุน แต่ Stretched`;
+    vsub.textContent='Upside เพิ่มเติมมาจาก CB Demand ที่ Model ยังขาด · Hold ไม่ใช่ Chase';
+  } else if (gapPct > -5) {
+    vbox.className='verdict v-fair'; vicon.textContent='⚖️';
+    vtxt.textContent=`Fair Value ±${Math.abs(gapPct).toFixed(1)}% — ราคาสะท้อน Assumptions แล้ว`;
+    vsub.textContent='Fundamental รองรับราคาปัจจุบัน · Momentum เป็น bonus';
+  } else if (gapPct > -15) {
+    vbox.className='verdict v-under'; vicon.textContent='🔹';
+    vtxt.textContent=`Undervalued ${Math.abs(gapPct).toFixed(1)}% — Scenario นี้ให้ Upside`;
+    vsub.textContent='ถ้า Assumptions เป็นจริง ราคาควรขึ้นไป $'+Math.round(fair).toLocaleString('en');
+  } else {
+    vbox.className='verdict v-under'; vicon.textContent='🟢';
+    vtxt.textContent=`Undervalued มาก ${Math.abs(gapPct).toFixed(1)}% — Strong Bullish Signal`;
+    vsub.textContent='Fundamental แข็งแกร่ง · ราคาควรขึ้นมาก';
+  }
+
+  // MOMENTUM HEALTH
+  const mom = vals.momentum;
+  const momPct = momPercentile(mom);
+  const momReturn = (mom*100).toFixed(1)+'%';
+  document.getElementById('mom-return').textContent = momReturn;
+  document.getElementById('mom-pct').textContent = momPct+'th';
+  document.getElementById('mom-pct').style.color = momPct>75?'var(--red)':momPct>50?'var(--orange)':'var(--green)';
+  document.getElementById('mom-fundgap').textContent = (gapPct>=0?'+':'')+gapPct.toFixed(1)+'%';
+  document.getElementById('mom-fundgap').style.color = gapPct>8?'var(--red)':gapPct<-5?'var(--green)':'var(--gold)';
+  document.getElementById('m-momentum').textContent = momReturn;
+
+  // Percentile gauge marker
+  document.getElementById('pct-marker').style.left = momPct+'%';
+  document.getElementById('pct-current-label').textContent = momPct+'th percentile';
+  document.getElementById('pct-current-label').style.color = momPct>75?'var(--red)':momPct>50?'var(--orange)':'var(--green)';
+
+  // Mom badge
+  const mbadge = document.getElementById('mom-badge');
+  if (momPct>=90){mbadge.textContent='🔥 Extreme ('+momPct+'th)';mbadge.className='mp-badge mb-hot';}
+  else if (momPct>=75){mbadge.textContent='⚡ Hot ('+momPct+'th)';mbadge.className='mp-badge mb-warm';}
+  else if (momPct>=40){mbadge.textContent='✓ Healthy ('+momPct+'th)';mbadge.className='mp-badge mb-ok';}
+  else {mbadge.textContent='❄️ Cold ('+momPct+'th)';mbadge.className='mp-badge mb-cold';}
+
+  // Signal cells
+  const gldVal = vals.gld;
+  const gldBaseline = DEFAULTS.gld;
+  const realRate = vals.rr;
+
+  // Signal 1: Momentum stretch
+  const s1 = momPct;
+  setSignal(1,
+    s1>=90 ? 'red' : s1>=75 ? 'yellow' : 'green',
+    s1+'th percentile',
+    s1>=90?'🔥 Extreme — ความเสี่ยง Mean Reversion สูง':s1>=75?'⚡ Stretched — Caution เพิ่ม':'✓ Healthy — ยังไปต่อได้'
+  );
+
+  // Signal 2: Fundamental support (fair vs actual)
+  setSignal(2,
+    Math.abs(gapPct)<8?'green':gapPct>15?'red':'yellow',
+    Math.abs(gapPct).toFixed(1)+'% gap',
+    Math.abs(gapPct)<8?'✓ Fundamental รองรับราคา':gapPct>15?'⚠️ Actual เกิน Fair Value มาก':'⚡ เกินนิดหน่อย — CB Demand ช่วยรับ'
+  );
+
+  // Signal 3: GLD demand
+  const gldChg = gldVal - gldBaseline;
+  setSignal(3,
+    gldChg>20?'green':gldChg<-20?'red':'yellow',
+    (gldChg>=0?'+':'')+Math.round(gldChg)+'M shares',
+    gldChg>20?'✓ Inflows แรง — Institutional ยังซื้อ':gldChg<-20?'⚠️ Outflows — Demand อ่อนแอ':'➡ Stable — ไม่มี Catalyst ใหม่'
+  );
+
+  // Signal 4: Macro backdrop (Real Rate)
+  setSignal(4,
+    realRate<0?'green':realRate<1.5?'yellow':'red',
+    realRate.toFixed(2)+'% Real Rate',
+    realRate<0?'✓ Real Rate ติดลบ — Favorable มาก':realRate<1.5?'⚡ Real Rate บวกเล็กน้อย — OK':
+    '⚠️ Real Rate สูง — Headwind สำหรับทอง'
+  );
+
+  // Overall signal
+  const signals = [
+    s1<75?1:s1<90?0:-1,
+    Math.abs(gapPct)<8?1:gapPct>15?-1:0,
+    gldChg>20?1:gldChg<-20?-1:0,
+    realRate<0?1:realRate<1.5?0:-1,
+  ];
+  const score = signals.reduce((a,b)=>a+b,0);
+  const sigEl = document.getElementById('m-signal');
+  const sigSub = document.getElementById('m-signal-sub');
+  const sigCard = document.getElementById('mc-signal');
+  if (score>=2){sigEl.textContent='BULLISH';sigEl.style.color='var(--green)';sigSub.textContent='Momentum + Fundamental ok';sigCard.className='mcard mc-green';}
+  else if (score>=0){sigEl.textContent='NEUTRAL';sigEl.style.color='var(--gold)';sigSub.textContent='Mixed signals';sigCard.className='mcard mc-gold';}
+  else{sigEl.textContent='CAUTION';sigEl.style.color='var(--red)';sigSub.textContent='Stretched momentum';sigCard.className='mcard mc-red';}
+
+  // Sensitivity table
+  const allKeys = ['rr','dxy','cpi','wti','vix','momentum','gld','m2'];
+  const activeKeys = currentModel==='post'?['rr','dxy','cpi','wti','vix','momentum','gld']:allKeys;
+  const maxBeta = Math.max(...activeKeys.map(k=>Math.abs(bm.b[allKeys.indexOf(k)+1])));
+  document.getElementById('sens-tbody').innerHTML = activeKeys.map(k => {
+    const fm = FACTOR_META.find(f=>f.key===k);
+    const b = bm.b[allKeys.indexOf(k)+1];
+    const barW = (Math.abs(b)/maxBeta*100).toFixed(0);
+    const cls = b>=0?'td-pos':'td-neg';
+    return `<tr>
+      <td style="color:${fm.color};font-weight:600">${fm.name}</td>
+      <td class="td-m">${vals[k].toFixed(fm.fmt)}${fm.unit}</td>
+      <td class="td-m" style="color:${fm.color}">${b.toFixed(b>100||b<-100?0:b>10||b<-10?1:2)}</td>
+      <td class="td-m ${cls}">${b>=0?'+':''}$${Math.round(Math.abs(b)).toLocaleString('en')}</td>
+      <td class="td-m ${b>=0?'td-neg':'td-pos'}">${b>=0?'-':'+'}$${Math.round(Math.abs(b)).toLocaleString('en')}</td>
+      <td><div class="mini-bar-wrap"><div class="mini-bar" style="width:${barW}px;max-width:80px;background:${fm.color};opacity:.7"></div><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--faint);margin-left:4px">${barW}%</span></div></td>
+    </tr>`;
+  }).join('');
+
+  // Chart
+  const dates = RAW.map(r=>r.date);
+  const actuals = RAW.map(r=>r.gold);
+  const postFairs = RAW.map(r=>r.fair_post||null);
+  const fullFairs = RAW.map(r=>r.fair_full||null);
+
+  let sD=dates,sA=actuals,sP=postFairs,sF=fullFairs;
+  if(periodSlice>0){const st=RAW.length-periodSlice;sD=sD.slice(st);sA=sA.slice(st);sP=sP.slice(st);sF=sF.slice(st);}
+
+  const datasets=[
+    {label:'Actual Gold',data:sA,borderColor:'#9A6E1A',borderWidth:1.8,pointRadius:0,tension:0.3,fill:false,order:4},
+    {label:'Fair (Post-2022)',data:sP,borderColor:'#C48A2A',borderWidth:1.5,borderDash:[5,3],pointRadius:0,tension:0.3,fill:false,order:2},
+    {label:'Fair (Full 8F)',data:sF,borderColor:'#3A7ABF',borderWidth:1.2,borderDash:[3,2],pointRadius:0,tension:0.3,fill:false,order:3},
+  ];
+
+  if(isScenario){
+    const scenLine=[...sP.map(()=>null)];
+    const lastValidIdx=sP.map((v,i)=>v!=null?i:-1).filter(i=>i>=0).pop();
+    if(lastValidIdx>=0) scenLine[lastValidIdx]=sP[lastValidIdx];
+    scenLine.push(fair);
+    const extD=[...sD,'Scenario'];
+    datasets.forEach(d=>d.data=[...d.data,null]);
+    datasets.push({label:'Your Scenario',data:scenLine,borderColor:'var(--teal)',borderWidth:2.5,
+      pointRadius:[...scenLine.slice(0,-1).map(()=>0),10],
+      pointBackgroundColor:'var(--teal)',pointBorderColor:'white',pointBorderWidth:2,
+      tension:0.1,fill:false,order:1});
+    sD=extD;
+    document.getElementById('leg-scen').style.display='flex';
+  } else {
+    document.getElementById('leg-scen').style.display='none';
+  }
+
+  if(chartInst)chartInst.destroy();
+  chartInst=new Chart(document.getElementById('mainChart'),{
+    type:'line',data:{labels:sD,datasets},
+    options:{responsive:true,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'white',borderColor:'#D8D3C8',borderWidth:1,titleColor:'#7A7468',bodyColor:'#1C1A16',padding:12,
+        callbacks:{label:ctx=>{if(ctx.raw===null)return null;
+          return`  ${ctx.dataset.label}: $${Math.round(ctx.raw).toLocaleString('en')}${ctx.dataset.label==='Your Scenario'?' ← Scenario':''}`;
+        }}}},
+      scales:{
+        x:{grid:{color:'#F0EDE6'},ticks:{color:'#A8A298',font:{family:'IBM Plex Mono',size:9},maxTicksLimit:12}},
+        y:{grid:{color:'#F0EDE6'},ticks:{color:'#A8A298',font:{family:'IBM Plex Mono',size:9},callback:v=>'$'+v.toLocaleString('en')}}
+      }}
+  });
+}
+
+function setSignal(n, color, val, desc){
+  const dotColors = {green:'var(--green)',red:'var(--red)',yellow:'#D4A840',gray:'var(--faint)'};
+  document.getElementById('sig-dot-'+n).style.background = dotColors[color]||'var(--faint)';
+  document.getElementById('sig-val-'+n).textContent = val;
+  document.getElementById('sig-val-'+n).style.color = dotColors[color];
+  document.getElementById('sig-desc-'+n).textContent = desc;
+}
+
+function setPeriod(n,btn){periodSlice=n;document.querySelectorAll('.pb').forEach(b=>b.classList.remove('active'));btn.classList.add('active');recalc();}
+function notify(msg){const el=document.getElementById('notif');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2500);}
+
+// Init
+recalc();
+</script>
+</body>
+</html>
