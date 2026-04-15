@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERGO Thailand — Namsing Building Disposal Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#BE0000;--reddark:#8B0000;--redbg:#FDF5F5;--redlite:#F5E0E0;
+  --black:#1A1A1A;--dark:#333;--mid:#666;--muted:#999;
+  --border:#E0E0E0;--light:#F7F7F7;--white:#FFF;
+  --ok:#1A6B2A;--okbg:#EBF7EE;--neg:#A52A2A;--negbg:#FDEAEA;
+  --warn:#7A5200;--warnbg:#FFF8E1;--navy:#1E3A6E;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+}
+body{font-family:var(--font);background:#F0F0F0;color:var(--black);font-size:14px}
+
+/* HEADER */
+.hdr{background:var(--red);color:#fff;position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.hdr-inner{max-width:1400px;margin:0 auto;padding:12px 28px;display:flex;align-items:center;justify-content:space-between}
+.hdr-logo{font-size:26px;font-weight:600;letter-spacing:-0.5px}
+.hdr-title{font-size:13px;font-weight:500;color:rgba(255,255,255,.9)}
+.hdr-right{display:flex;gap:14px;align-items:center}
+.badge{font-size:10px;font-weight:600;letter-spacing:.1em;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.3);padding:3px 10px;border-radius:3px}
+.btn-print{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:5px 14px;border-radius:4px;font-size:12px;cursor:pointer;font-family:var(--font);font-weight:500}
+.btn-print:hover{background:rgba(255,255,255,.25)}
+
+/* LAYOUT */
+.main{max-width:1400px;margin:0 auto;padding:22px 28px 60px;display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start}
+
+/* SIDEBAR */
+.sidebar{display:flex;flex-direction:column;gap:14px;position:sticky;top:66px}
+.panel{background:#fff;border-radius:8px;border:1px solid var(--border);overflow:hidden}
+.panel-head{background:var(--reddark);color:#fff;padding:9px 14px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+.panel-body{padding:14px;display:flex;flex-direction:column;gap:10px}
+.inp-row{display:flex;flex-direction:column;gap:3px}
+.inp-label{font-size:11px;font-weight:500;color:var(--mid);letter-spacing:.03em}
+.inp-wrap{display:flex;align-items:center;border:1.5px solid var(--border);border-radius:5px;overflow:hidden;transition:border-color .15s}
+.inp-wrap:focus-within{border-color:var(--red)}
+.inp-pfx{padding:6px 9px;background:var(--light);color:var(--muted);font-size:11px;font-family:var(--mono);border-right:1px solid var(--border);white-space:nowrap}
+.inp-wrap input{flex:1;border:none;outline:none;padding:6px 9px;font-size:13px;font-family:var(--mono);font-weight:500;color:var(--reddark);background:transparent;width:100%}
+.inp-hint{font-size:10px;color:var(--muted);font-style:italic}
+.divlbl{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;padding:3px 0 1px;border-top:1px solid var(--border);margin-top:2px}
+
+/* CONTENT */
+.content{display:flex;flex-direction:column;gap:18px}
+.card{background:#fff;border-radius:8px;border:1px solid var(--border);overflow:hidden}
+.card-head{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--border);background:var(--light)}
+.card-icon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.card-title{font-size:13px;font-weight:600}
+.card-sub{font-size:10px;color:var(--muted);margin-top:1px}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:14px}
+.metric{background:var(--light);border-radius:6px;border:1px solid var(--border);padding:11px 13px}
+.metric-lbl{font-size:10px;color:var(--muted);margin-bottom:3px}
+.metric-val{font-size:19px;font-weight:700;font-family:var(--mono);color:var(--reddark);line-height:1}
+.metric-sub{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{padding:8px 10px;font-size:10px;font-weight:600;color:#fff;white-space:nowrap;text-align:center}
+th:first-child{text-align:left}
+td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;font-family:var(--mono);font-size:12px;white-space:nowrap}
+td:first-child{text-align:left;font-family:var(--font);font-weight:500;color:var(--dark)}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:var(--light)}
+.pos{color:var(--ok);font-weight:600}
+.neg{color:var(--neg)}
+.zero{color:var(--muted)}
+.tr-bv td{background:var(--light)!important;font-size:11px;color:var(--muted)}
+
+/* CHARTS */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px}
+.chart-box{background:#fff;border-radius:6px;border:1px solid var(--border);padding:14px 16px}
+.chart-title{font-size:11px;font-weight:600;color:var(--dark);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.chart-title::before{content:'';display:inline-block;width:3px;height:13px;background:var(--red);border-radius:2px}
+.chart-wrap{position:relative;height:200px}
+
+/* NOTE BOX */
+.notebox{font-size:9.5px;padding:10px 14px 10px 20px;border-left:3px solid var(--warn);background:var(--warnbg);color:var(--warn);border-top:1px solid var(--border);line-height:1.5}
+.notebox.flag{border-left-color:var(--red);background:var(--redbg);color:var(--neg)}
+.notebox.info{border-left-color:var(--navy);background:#E8F4FD;color:#0C4A6E}
+
+/* PERIOD SELECTOR */
+.period-tabs{display:flex;gap:6px;padding:12px 16px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.ptab{padding:5px 13px;border-radius:4px;border:1px solid var(--border);font-size:12px;cursor:pointer;background:#fff;color:var(--mid);font-family:var(--font);transition:all .15s}
+.ptab:hover{border-color:var(--red);color:var(--red)}
+.ptab.active{background:var(--red);border-color:var(--red);color:#fff;font-weight:500}
+.ptab.flagged{border-style:dashed}
+
+/* DONATION */
+.donation-box{background:linear-gradient(135deg,#0E5C68,#0a4a54);border-radius:8px;padding:18px 22px;color:#fff;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}
+.d-steps{display:flex;gap:0;align-items:center;flex-wrap:wrap}
+.d-step{display:flex;align-items:center;gap:7px}
+.d-num{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.d-txt{font-size:10.5px;line-height:1.3}
+.d-txt strong{font-size:11px;color:#7FE0EE;display:block}
+.d-arr{color:rgba(255,255,255,.3);margin:0 5px;font-size:13px}
+.d-summ{text-align:right}
+.d-summ .lbl{font-size:9px;color:rgba(255,255,255,.6)}
+.d-summ .big{font-size:24px;font-weight:700;font-family:var(--mono);color:#7FE0EE;line-height:1}
+.d-summ .note{font-size:9px;color:rgba(255,255,255,.5);margin-top:3px}
+
+@media print{
+  body{background:#fff}
+  .sidebar{display:none}
+  .main{grid-template-columns:1fr;padding:0}
+  .hdr{position:static}
+  .btn-print{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-inner">
+    <div style="display:flex;align-items:baseline;gap:12px">
+      <span class="hdr-logo">ERGO</span>
+      <span style="font-size:11px;color:rgba(255,255,255,.6)">A Munich Re company</span>
+    </div>
+    <div class="hdr-title">Namsing Building — Disposal Scenario Calculator</div>
+    <div class="hdr-right">
+      <span class="badge">CONFIDENTIAL</span>
+      <button class="btn-print" onclick="window.print()">⎙ Print</button>
+    </div>
+  </div>
+</header>
+
+<div class="main">
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+
+  <div class="panel">
+    <div class="panel-head">Asset — Book Values</div>
+    <div class="panel-body">
+      <div class="inp-row">
+        <label class="inp-label">BV — IFRS (YE2025)</label>
+        <div class="inp-wrap"><span class="inp-pfx">฿M</span><input type="number" id="bv_ifrs" value="618.098252" step="0.1" oninput="recalc()"></div>
+        <span class="inp-hint">Base for P&L calculation</span>
+      </div>
+      <div class="inp-row">
+        <label class="inp-label">BV — TFRS (YE2025)</label>
+        <div class="inp-wrap"><span class="inp-pfx">฿M</span><input type="number" id="bv_tfrs" value="594.567630" step="0.1" oninput="recalc()"></div>
+        <span class="inp-hint">Base for CAR / TCA calculation</span>
+      </div>
+      <div class="inp-row">
+        <label class="inp-label">IFRS Dep / year</label>
+        <div class="inp-wrap"><span class="inp-pfx">฿M</span><input type="number" id="dep_ifrs" value="5.290521" step="0.01" oninput="recalc()"></div>
+      </div>
+      <div class="inp-row">
+        <label class="inp-label">TFRS Dep / year</label>
+        <div class="inp-wrap"><span class="inp-pfx">฿M</span><input type="number" id="dep_tfrs" value="12.030292" step="0.01" oninput="recalc()"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">CAR Parameters</div>
+    <div class="panel-body">
+      <div class="inp-row">
+        <label class="inp-label">TCA (฿M)</label>
+        <div class="inp-wrap"><span class="inp-pfx">฿M</span><input type="number" id="tca" value="2091" step="1" oninput="recalc()"></div>
+      </div>
+      <div class="inp-row">
+        <label class="inp-label">TCR (฿M)</label>
+        <div class="inp-wrap"><span class="inp-pfx">฿M</span><input type="number" id="tcr" value="989" step="1" oninput="recalc()"></div>
+      </div>
+      <div class="inp-row">
+        <label class="inp-label">Risk Charge (฿)</label>
+        <div class="inp-wrap"><span class="inp-pfx">฿</span><input type="number" id="risk" value="56483925" step="100000" oninput="recalc()"></div>
+        <span class="inp-hint">Removed from TCR on disposal</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">Transfer Fee Inputs</div>
+    <div class="panel-body">
+      <div class="inp-row">
+        <label class="inp-label">Land area (sq.wah)</label>
+        <div class="inp-wrap"><span class="inp-pfx">sq.w</span><input type="number" id="land_area" value="855" step="1" oninput="recalc()"></div>
+      </div>
+      <div class="inp-row">
+        <label class="inp-label">Land price/sq.wah — pre-2027</label>
+        <div class="inp-wrap"><span class="inp-pfx">฿</span><input type="number" id="land_p_pre" value="250000" step="1000" oninput="recalc()"></div>
+      </div>
+      <div class="inp-row">
+        <label class="inp-label">Land price/sq.wah — 2027+</label>
+        <div class="inp-wrap"><span class="inp-pfx">฿</span><input type="number" id="land_p_new" value="250000" step="1000" oninput="recalc()"></div>
+        <span class="inp-hint">Update when new appraisal published</span>
+      </div>
+      <div class="inp-row">
+        <label class="inp-label">Building area (sq.m.)</label>
+        <div class="inp-wrap"><span class="inp-pfx">sq.m</span><input type="number" id="bld_area" value="24109" step="1" oninput="recalc()"></div>
+      </div>
+      <div class="inp-row">
+        <label class="inp-label">Building price/sq.m. — pre-2027</label>
+        <div class="inp-wrap"><span class="inp-pfx">฿</span><input type="number" id="bld_p_pre" value="9400" step="100" oninput="recalc()"></div>
+      </div>
+      <div class="inp-row">
+        <label class="inp-label">Building price/sq.m. — 2027+</label>
+        <div class="inp-wrap"><span class="inp-pfx">฿</span><input type="number" id="bld_p_new" value="9400" step="100" oninput="recalc()"></div>
+        <span class="inp-hint">Update when new appraisal published</span>
+      </div>
+      <div class="inp-row">
+        <label class="inp-label">Building age at 2026 (yrs)</label>
+        <div class="inp-wrap"><span class="inp-pfx">yr</span><input type="number" id="bld_age" value="32" step="1" oninput="recalc()"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">Transaction Costs</div>
+    <div class="panel-body">
+      <div class="inp-row">
+        <label class="inp-label">Transfer fee rate</label>
+        <div class="inp-wrap"><span class="inp-pfx">%</span><input type="number" id="tf_rate" value="2" step="0.1" oninput="recalc()"></div>
+      </div>
+      <div class="inp-row">
+        <label class="inp-label">Specific Business Tax (SBT)</label>
+        <div class="inp-wrap"><span class="inp-pfx">%</span><input type="number" id="sbt" value="3.3" step="0.1" oninput="recalc()"></div>
+      </div>
+      <div class="inp-row">
+        <label class="inp-label">Commission rate</label>
+        <div class="inp-wrap"><span class="inp-pfx">%</span><input type="number" id="comm" value="3" step="0.5" oninput="recalc()"></div>
+        <span class="inp-hint">Adjustable</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">Selling Price Scenarios</div>
+    <div class="panel-body">
+      <div class="divlbl">฿M — edit any price</div>
+      <div class="inp-row"><label class="inp-label">S1</label><div class="inp-wrap"><span class="inp-pfx">฿M</span><input type="number" id="p0" value="665" step="10" oninput="recalc()"></div></div>
+      <div class="inp-row"><label class="inp-label">S2</label><div class="inp-wrap"><span class="inp-pfx">฿M</span><input type="number" id="p1" value="618" step="10" oninput="recalc()"></div></div>
+      <div class="inp-row"><label class="inp-label">S3</label><div class="inp-wrap"><span class="inp-pfx">฿M</span><input type="number" id="p2" value="550" step="10" oninput="recalc()"></div></div>
+      <div class="inp-row"><label class="inp-label">S4</label><div class="inp-wrap"><span class="inp-pfx">฿M</span><input type="number" id="p3" value="450" step="10" oninput="recalc()"></div></div>
+      <div class="inp-row"><label class="inp-label">S5</label><div class="inp-wrap"><span class="inp-pfx">฿M</span><input type="number" id="p4" value="400" step="10" oninput="recalc()"></div></div>
+      <div class="inp-row"><label class="inp-label">S6</label><div class="inp-wrap"><span class="inp-pfx">฿M</span><input type="number" id="p5" value="300" step="10" oninput="recalc()"></div></div>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ── CONTENT ── -->
+<div class="content">
+
+  <!-- Metrics -->
+  <div class="card">
+    <div class="metrics" id="metrics"></div>
+    <div class="notebox info">
+      ⚠ New TCR reduction excludes Diversification Benefit — actual CAR improvement will be less than shown. &nbsp;|&nbsp;
+      Tax base = max(selling price, land appraisal) — actual tax not lower than appraisal-based calculation. &nbsp;|&nbsp;
+      Figures for 2028+ are indicative only (OIC revaluation may change TCR).
+    </div>
+  </div>
+
+  <!-- Period selector -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:var(--reddark)">≡</div>
+      <div><div class="card-title">P&L & CAR by Scenario</div><div class="card-sub">Select disposal period to view — all figures update live</div></div>
+    </div>
+    <div class="period-tabs" id="period-tabs"></div>
+    <div class="tbl-wrap"><table id="main-table"></table></div>
+    <div class="notebox">P&L = Net Sales (after transfer fee, SBT, commission) − IFRS BV.&nbsp; CAR = New TCA / New TCR.&nbsp; ⚠ 2027+: transfer fee base uses new appraisal inputs.</div>
+  </div>
+
+  <!-- Charts -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:var(--navy)">▲</div>
+      <div><div class="card-title">Visual Summary — Selected Period</div><div class="card-sub" id="chart-period-label"></div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-box"><div class="chart-title">P&L on Disposal (฿M)</div><div class="chart-wrap"><canvas id="chart-pnl"></canvas></div></div>
+      <div class="chart-box"><div class="chart-title">CAR after Disposal (%)</div><div class="chart-wrap"><canvas id="chart-car"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- All periods P&L summary -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:var(--red)">↕</div>
+      <div><div class="card-title">P&L — All Periods Summary (฿M)</div><div class="card-sub">Gain/loss improves over time as IFRS BV declines ~฿5.3M/yr</div></div>
+    </div>
+    <div class="tbl-wrap"><table id="all-periods-table"></table></div>
+    <div class="notebox">IFRS BV row shows net carrying value at disposal date (YE2025 BV minus IFRS depreciation elapsed).</div>
+  </div>
+
+  <!-- Donation note -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-icon" style="background:#0E5C68">!</div>
+      <div><div class="card-title">Donation Scenario — Why It Is Excluded</div><div class="card-sub">Thai Revenue Code Section 65 tri — 2% cap on net profit</div></div>
+    </div>
+    <div style="padding:16px">
+      <div class="donation-box" id="donation-box"></div>
+    </div>
+    <div class="notebox flag">
+      Donation deduction is capped at <strong>2% of net profit</strong> — NOT 2× BV as initially assumed.
+      At ฿1,000M profit, only ฿20M is deductible. Remaining ฿580M is added back → taxable income = ฿1,580M → tax = ฿316M (extra ฿116M vs not donating).
+      Donation is EXCLUDED from main analysis. Confirm qualifying recipient eligibility with tax advisor.
+    </div>
+  </div>
+
+</div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+// ── Period definitions ──────────────────────────────────────
+const PERIODS = [
+  {name:'Q2/2026', ifrsYrs:0.5, tfrsYrs:0.5, useNewAppr:false},
+  {name:'Q4/2026', ifrsYrs:1.0, tfrsYrs:1.0, useNewAppr:false},
+  {name:'2027',    ifrsYrs:1.5, tfrsYrs:1.5, useNewAppr:true},
+  {name:'2028',    ifrsYrs:2.5, tfrsYrs:2.5, useNewAppr:true},
+  {name:'2029',    ifrsYrs:3.5, tfrsYrs:3.0, useNewAppr:true},
+  {name:'2030',    ifrsYrs:4.5, tfrsYrs:4.0, useNewAppr:true},
+  {name:'2031',    ifrsYrs:5.5, tfrsYrs:5.0, useNewAppr:true},
+];
+
+const SC_COLORS = ['#1E3A6E','#2B4F9E','#4B5998','#6B6B98','#7B2D2D','#BE0000'];
+let activePeriod = 0;
+let chartPNL = null, chartCAR = null;
+
+// ── Read inputs ─────────────────────────────────────────────
+function v(id){ return parseFloat(document.getElementById(id).value)||0; }
+function getPrices(){ return [v('p0'),v('p1'),v('p2'),v('p3'),v('p4'),v('p5')]; }
+
+function calcTF(ifrsYrs) {
+  const useNew = ifrsYrs >= 1.5;
+  const landP  = useNew ? v('land_p_new') : v('land_p_pre');
+  const bldP   = useNew ? v('bld_p_new')  : v('bld_p_pre');
+  const age    = v('bld_age') + ifrsYrs;
+  const rem    = Math.max(0, 1 - 0.02 * age);
+  const appr   = v('land_area')*landP + v('bld_area')*bldP*rem;
+  return -(appr * v('tf_rate') / 100);
+}
+
+function calcScenario(priceMB, period) {
+  const sale   = priceMB * 1e6;
+  const tf     = calcTF(period.ifrsYrs);
+  const sbt    = -sale * v('sbt') / 100;
+  const comm   = -sale * v('comm') / 100;
+  const netSale= sale + tf + sbt + comm;
+
+  const bvI = (v('bv_ifrs') - period.ifrsYrs * v('dep_ifrs')) * 1e6;
+  const bvT = (v('bv_tfrs') - period.tfrsYrs * v('dep_tfrs')) * 1e6;
+
+  const pnl    = (netSale - bvI) / 1e6;
+  const newTCA = v('tca') + (netSale - bvT) / 1e6;
+  const newTCR = (v('tcr') * 1e6 - v('risk')) / 1e6;
+  const newCAR = (newTCA / newTCR) * 100;
+  const carBase= (v('tca') / v('tcr')) * 100;
+  const carDelta = newCAR - carBase;
+
+  return { sale:sale/1e6, tf:tf/1e6, sbt:sbt/1e6, comm:comm/1e6, netSale:netSale/1e6,
+           bvIFRS:bvI/1e6, pnl, newTCA, newTCR, newCAR, carBase, carDelta };
+}
+
+function fmt(n, dec=1) {
+  if(n===null||isNaN(n)) return '—';
+  const abs = Math.abs(n).toFixed(dec);
+  if(n>0) return `+${abs}`;
+  if(n<0) return `(${abs})`;
+  return abs;
+}
+function fmtM(n,dec=1){ return fmt(n,dec)+'M'; }
+function clsN(n){ return n>0?'pos':n<0?'neg':'zero'; }
+
+// ── Build period tabs ────────────────────────────────────────
+function buildTabs() {
+  const cont = document.getElementById('period-tabs');
+  cont.innerHTML = '';
+  PERIODS.forEach((p, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'ptab' + (i===activePeriod?' active':'') + (p.useNewAppr?' flagged':'');
+    btn.textContent = p.name + (p.useNewAppr ? ' ⚠' : '');
+    btn.onclick = () => { activePeriod = i; recalc(); };
+    cont.appendChild(btn);
+  });
+}
+
+// ── Recalc all ───────────────────────────────────────────────
+function recalc() {
+  const prices = getPrices();
+  const period = PERIODS[activePeriod];
+
+  // All period data for all periods
+  const allData = PERIODS.map(p => prices.map(pr => calcScenario(pr, p)));
+
+  buildTabs();
+  renderMetrics(prices, period, allData[activePeriod]);
+  renderMainTable(prices, period, allData[activePeriod]);
+  renderAllPeriods(prices, allData);
+  renderCharts(prices, allData[activePeriod]);
+  renderDonation();
+}
+
+function renderMetrics(prices, period, results) {
+  const carBase = (v('tca')/v('tcr')*100).toFixed(1);
+  const bvNow = (v('bv_ifrs') - period.ifrsYrs*v('dep_ifrs')).toFixed(1);
+  const dep = v('dep_ifrs').toFixed(2);
+  const newTCR = ((v('tcr')*1e6-v('risk'))/1e6).toFixed(1);
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric"><div class="metric-lbl">IFRS BV at ${period.name}</div><div class="metric-val">฿${bvNow}M</div><div class="metric-sub">YE2025 less ${period.ifrsYrs}yr dep</div></div>
+    <div class="metric"><div class="metric-lbl">CAR baseline</div><div class="metric-val">${carBase}%</div><div class="metric-sub">Current TCA/TCR</div></div>
+    <div class="metric"><div class="metric-lbl">New TCR (post-disposal)</div><div class="metric-val">฿${newTCR}M</div><div class="metric-sub">⚠ Excl. Diversification</div></div>
+    <div class="metric"><div class="metric-lbl">IFRS Dep / year</div><div class="metric-val">฿${dep}M</div><div class="metric-sub">P&L improves this much/yr</div></div>
+  `;
+}
+
+function renderMainTable(prices, period, results) {
+  const carBase = v('tca')/v('tcr')*100;
+  const rows = [
+    {lbl:'Gross Selling Price (฿M)', vals: results.map(r=>r.sale.toFixed(1)), rowCls:''},
+    {lbl:'Transfer Fee (฿M)',        vals: results.map(r=>r.tf.toFixed(2)),   rowCls:''},
+    {lbl:'SBT (฿M)',                 vals: results.map(r=>r.sbt.toFixed(2)),  rowCls:''},
+    {lbl:'Commission (฿M)',          vals: results.map(r=>r.comm.toFixed(2)), rowCls:''},
+    {lbl:'Net Sales Proceeds (฿M)',  vals: results.map(r=>r.netSale.toFixed(1)), rowCls:'bold', total:true},
+    {lbl:'IFRS BV at disposal (฿M)', vals: results.map(r=>r.bvIFRS.toFixed(1)), rowCls:''},
+    {lbl:'P&L on Disposal (฿M)',     vals: results.map(r=>fmt(r.pnl,1)),         rowCls:'', color:true, total:true},
+    {lbl:'New TCA (฿M)',             vals: results.map(r=>r.newTCA.toFixed(1)), rowCls:''},
+    {lbl:'New TCR (฿M)',             vals: results.map(r=>r.newTCR.toFixed(1)), rowCls:''},
+    {lbl:'New CAR (%)',              vals: results.map(r=>r.newCAR.toFixed(1)+'%'), rowCls:'bold', total:true},
+    {lbl:'CAR Δ vs baseline',        vals: results.map(r=>(r.carDelta>=0?'+':'')+r.carDelta.toFixed(1)+'%'), rowCls:'', color:true},
+  ];
+
+  const scHdrs = prices.map((p,i) => `<th style="background:${SC_COLORS[i]}">S${i+1}<br><span style="font-weight:400;font-size:10px;opacity:.85">฿${p}M</span></th>`).join('');
+  let html = `<thead><tr><th style="background:var(--reddark);text-align:left">Metric</th>${scHdrs}</tr></thead><tbody>`;
+
+  rows.forEach(row => {
+    const isSec = row.lbl.startsWith('—');
+    const bg = row.total ? 'background:var(--redbg)!important;' : '';
+    html += `<tr style="${bg}"><td style="${row.total?'font-weight:700':''}">${row.lbl}</td>`;
+    row.vals.forEach((val, si) => {
+      let cls = '';
+      if(row.color) {
+        const n = parseFloat(val);
+        cls = n>0?'pos':n<0?'neg':'zero';
+      }
+      html += `<td class="${cls}" style="${row.total?'font-weight:700':''}">${val}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('main-table').innerHTML = html;
+}
+
+function renderAllPeriods(prices, allData) {
+  const scHdrs = prices.map((p,i) => `<th style="background:${SC_COLORS[i]}">S${i+1} ฿${p}M</th>`).join('');
+  let html = `<thead><tr><th style="background:var(--reddark);text-align:left">Period</th>${scHdrs}</tr></thead><tbody>`;
+
+  PERIODS.forEach((p, pi) => {
+    const results = allData[pi];
+    const flag = p.useNewAppr ? ' <span style="color:var(--warn);font-size:10px">⚠</span>':'';
+    html += `<tr><td style="font-weight:500">${p.name}${flag}</td>`;
+    results.forEach((r, si) => {
+      const pnl = r.pnl;
+      const cls = pnl>0?'pos':pnl<0?'neg':'zero';
+      html += `<td class="${cls}">${fmt(pnl,1)}M</td>`;
+    });
+    html += '</tr>';
+    // IFRS BV row under each period? Too busy — just show at bottom
+  });
+
+  // IFRS BV row
+  html += `<tr class="tr-bv"><td>IFRS BV at disposal (฿M)</td>`;
+  PERIODS.forEach((p,pi) => {
+    const bv = (v('bv_ifrs') - p.ifrsYrs*v('dep_ifrs')).toFixed(1);
+    html += `<td>${bv}</td>`;
+  });
+  html += '</tr>';
+
+  html += '</tbody>';
+  document.getElementById('all-periods-table').innerHTML = html;
+}
+
+function renderCharts(prices, results) {
+  const period = PERIODS[activePeriod];
+  document.getElementById('chart-period-label').textContent = `Period: ${period.name}`;
+
+  const pnlVals = results.map(r => parseFloat(r.pnl.toFixed(1)));
+  const carVals = results.map(r => parseFloat(r.newCAR.toFixed(1)));
+  const carBase = v('tca')/v('tcr')*100;
+  const labels  = prices.map((p,i) => `S${i+1} ฿${p}M`);
+  const pnlColors = pnlVals.map(v => v>=0?'#1A6B2A':'#BE0000');
+  const carColors = carVals.map(v => v>=(carBase*0.95)?'#1A6B2A':'#A52A2A');
+
+  if(chartPNL) chartPNL.destroy();
+  chartPNL = new Chart(document.getElementById('chart-pnl'), {
+    type:'bar',
+    data:{labels, datasets:[{data:pnlVals, backgroundColor:pnlColors, borderRadius:4, borderSkipped:false}]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#666',font:{size:10}},grid:{display:false}},
+        y:{ticks:{color:'#666',font:{size:10},callback:v=>(v<0?'(':'')+Math.abs(v)+(v<0?')':'')},grid:{color:'#EEE'}}
+      }
+    }
+  });
+
+  if(chartCAR) chartCAR.destroy();
+  chartCAR = new Chart(document.getElementById('chart-car'), {
+    type:'bar',
+    data:{labels, datasets:[{data:carVals, backgroundColor:carColors, borderRadius:4, borderSkipped:false}]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#666',font:{size:10}},grid:{display:false}},
+        y:{ticks:{color:'#666',font:{size:10},callback:v=>v+'%'},grid:{color:'#EEE'},
+           min:Math.max(0, Math.min(...carVals)-15)}
+      }
+    },
+    plugins:[{afterDraw(chart){
+      const ctx=chart.ctx, yAxis=chart.scales.y;
+      const y=yAxis.getPixelForValue(carBase);
+      if(y<yAxis.top||y>yAxis.bottom) return;
+      ctx.save();
+      ctx.strokeStyle='#1E3A6E'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.moveTo(chart.chartArea.left,y); ctx.lineTo(chart.chartArea.right,y); ctx.stroke();
+      ctx.fillStyle='#1E3A6E'; ctx.font='10px DM Sans,sans-serif';
+      ctx.fillText('Baseline '+carBase.toFixed(1)+'%', chart.chartArea.right-110, y-4);
+      ctx.restore();
+    }}]
+  });
+}
+
+function renderDonation() {
+  const bv   = v('bv_ifrs');
+  const tax  = 0.20;
+  const cap  = 0.02;
+  const profit = 1000;
+  const deductible = profit * cap;
+  const excess = bv - deductible;
+  const adjIncome = profit + excess;
+  const taxWith   = adjIncome * tax;
+  const taxWout   = profit * tax;
+  const extraTax  = taxWith - taxWout;
+  const netImpact = -bv + deductible*tax;
+
+  document.getElementById('donation-box').innerHTML = `
+    <div class="d-steps">
+      <div class="d-step"><div class="d-num">1</div><div class="d-txt"><strong>Transfer asset</strong>Book out at NBV ฿${bv.toFixed(0)}M</div></div>
+      <span class="d-arr">→</span>
+      <div class="d-step"><div class="d-num">2</div><div class="d-txt"><strong>P&L loss</strong>฿${bv.toFixed(0)}M hits P&L</div></div>
+      <span class="d-arr">→</span>
+      <div class="d-step"><div class="d-num">3</div><div class="d-txt"><strong>Deduction cap</strong>2% × profit = ฿${deductible.toFixed(0)}M only</div></div>
+      <span class="d-arr">→</span>
+      <div class="d-step"><div class="d-num">4</div><div class="d-txt"><strong>Add-back</strong>฿${excess.toFixed(0)}M added back to income</div></div>
+      <span class="d-arr">→</span>
+      <div class="d-step"><div class="d-num">5</div><div class="d-txt"><strong>Extra tax cost</strong>฿${extraTax.toFixed(0)}M more than not donating</div></div>
+    </div>
+    <div class="d-summ">
+      <div class="lbl">Assuming ฿1,000M profit</div>
+      <div class="big">+฿${extraTax.toFixed(0)}M</div>
+      <div class="note">extra tax vs NOT donating</div>
+    </div>
+  `;
+}
+
+recalc();
+</script>
+</body>
+</html>
